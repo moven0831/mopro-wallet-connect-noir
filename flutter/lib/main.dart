@@ -636,6 +636,33 @@ class _HomePageState extends State<HomePage> {
       // Print proof byte length
       print("Proof byte length: ${_noirProofResult!.length}");
       
+      // Print entire proof in hex format for debugging
+      print("Full proof hex: ${hex.encode(_noirProofResult!)}");
+      
+      // Extract proof components from the full proof data
+      // The proof contains: 4 bytes metadata + 32 bytes public input + 14080 bytes proof
+      const int metadataSize = 4;
+      const int publicInputSize = 32;
+      const int expectedProofSize = 14080; // 440 * 32 bytes
+      
+      if (_noirProofResult!.length != metadataSize + publicInputSize + expectedProofSize) {
+        throw Exception("Invalid proof size: expected ${metadataSize + publicInputSize + expectedProofSize}, got ${_noirProofResult!.length}");
+      }
+      
+      // Extract metadata (first 4 bytes)
+      final metadataBytes = _noirProofResult!.sublist(0, metadataSize);
+      
+      // Extract public input from the proof data
+      final publicInputBytes = _noirProofResult!.sublist(metadataSize, metadataSize + publicInputSize);
+      
+      // Extract raw proof bytes (skip metadata and public input)
+      final rawProofBytes = _noirProofResult!.sublist(metadataSize + publicInputSize);
+      
+      // Print each component in hex
+      print("Metadata bytes (${metadataBytes.length}): ${hex.encode(metadataBytes)}");
+      print("Public input bytes (${publicInputBytes.length}): ${hex.encode(publicInputBytes)}");
+      print("Raw proof bytes (${rawProofBytes.length}): ${hex.encode(rawProofBytes)}");
+      
       // Create Web3 client
       final rpcUrl = 'https://ethereum-sepolia.publicnode.com';
       final httpClient = Web3Client(rpcUrl, http.Client());
@@ -646,21 +673,18 @@ class _HomePageState extends State<HomePage> {
         EthereumAddress.fromHex(contractAddress),
       );
       
-      // Prepare public inputs - for this circuit, the public input is a * b
-      final a = int.parse(_controllerNoirA.text);
-      final b = int.parse(_controllerNoirB.text);
-      final publicInputValue = a * b;
+      // Prepare proof and public inputs for the contract (web3dart expects Uint8List)
+      final publicInputsArray = [publicInputBytes];
       
-      // Convert to bytes32
-      final publicInputBytes = BigInt.from(publicInputValue).toRadixString(16).padLeft(64, '0');
-      final publicInputsArray = [hex.decode(publicInputBytes)];
+      print("Sending proof bytes (${rawProofBytes.length}): 0x${hex.encode(rawProofBytes).substring(0, 50)}...");
+      print("Sending public input bytes (${publicInputBytes.length}): 0x${hex.encode(publicInputBytes)}");
       
       // Call the verify function
       final verifyFunction = contract.function('verify');
       final result = await httpClient.call(
         contract: contract,
         function: verifyFunction,
-        params: [_noirProofResult!, publicInputsArray],
+        params: [rawProofBytes, publicInputsArray],
       );
       
       valid = result.first as bool;
