@@ -1,0 +1,6 @@
+target/
+build/
+
+# ignore bindings
+MoproAndroidBindings/
+MoproiOSBindings/
