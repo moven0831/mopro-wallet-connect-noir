@@ -29,6 +29,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
 
+  # Reown AppKit for wallet connect functionality
+  reown_appkit: ^1.4.0
+
 dev_dependencies:
   integration_test:
     sdk: flutter

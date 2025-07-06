@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">relay.walletconnect.com</domain>
+        <domain includeSubdomains="true">relay.walletconnect.org</domain>
+        <domain includeSubdomains="true">bridge.walletconnect.org</domain>
+        <domain includeSubdomains="true">ethereum-sepolia-rpc.publicnode.com</domain>
+        <domain includeSubdomains="true">reown.com</domain>
+        <domain includeSubdomains="true">walletconnect.com</domain>
+        <domain includeSubdomains="true">walletconnect.org</domain>
+        <domain includeSubdomains="true">blockchain-api.reown.com</domain>
+    </domain-config>
+</network-security-config> 
