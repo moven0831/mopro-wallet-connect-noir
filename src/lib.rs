@@ -1,10 +1,6 @@
 // Here we're calling a macro exported with Uniffi. This macro will
 // write some functions and bind them to FFI type.
 // These functions include:
-// - `generate_circom_proof`
-// - `verify_circom_proof`
-// - `generate_halo2_proof`
-// - `verify_halo2_proof`
 // - `generate_noir_proof`
 // - `verify_noir_proof`
 mopro_ffi::app!();
@@ -15,10 +11,6 @@ mopro_ffi::app!();
 fn mopro_uniffi_hello_world() -> String {
     "Hello, World!".to_string()
 }
-
-// CIRCOM_TEMPLATE
-
-// HALO2_TEMPLATE
 
 #[cfg(test)]
 mod noir_tests {
@@ -42,7 +34,6 @@ mod noir_tests {
         assert!(valid);
     }
 }
-
 
 #[cfg(test)]
 mod uniffi_tests {

@@ -26,26 +26,6 @@ abstract class MoproFlutterPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<CircomProofResult?> generateCircomProof(
-      String zkeyPath, String inputs, ProofLib proofLib) {
-    throw UnimplementedError('generateCircomProof() has not been implemented.');
-  }
-
-  Future<bool> verifyCircomProof(
-      String zkeyPath, CircomProofResult proof, ProofLib proofLib) {
-    throw UnimplementedError('verifyCircomProof() has not been implemented.');
-  }
-
-  Future<Halo2ProofResult?> generateHalo2Proof(
-      String srsPath, String pkPath, Map<String, List<String>> inputs) {
-    throw UnimplementedError('generateHalo2Proof() has not been implemented.');
-  }
-
-  Future<bool> verifyHalo2Proof(
-      String srsPath, String vkPath, Uint8List proof, Uint8List inputs) {
-    throw UnimplementedError('verifyHalo2Proof() has not been implemented.');
-  }
-
   Future<Uint8List> generateNoirProof(
       String circuitPath, String? srsPath, List<String> inputs) {
     throw UnimplementedError('generateNoirProof() has not been implemented.');
