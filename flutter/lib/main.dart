@@ -1,7 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:mopro_flutter/mopro_flutter.dart';
+import 'package:web3dart/web3dart.dart';
+import 'package:convert/convert.dart';
+import 'package:http/http.dart' as http;
+
 import 'wallet_connect_service.dart';
 
 // Global navigator key for the app
@@ -39,8 +45,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Uint8List? _noirProofResult;
   bool? _noirValid;
+  bool? _onChainValid;
   final _moproFlutterPlugin = MoproFlutter();
   bool isProving = false;
+  bool isVerifyingOnChain = false;
   Exception? _error;
   bool _walletConnected = false;
   bool _isInitializing = true;
@@ -48,6 +56,55 @@ class _HomePageState extends State<HomePage> {
   // Controllers to handle user input
   final TextEditingController _controllerNoirA = TextEditingController();
   final TextEditingController _controllerNoirB = TextEditingController();
+  
+  // Smart contract details
+  static const String contractAddress = "0x593ce6b2A205591b9bD520Dce4392ef67913EE4F";
+  static const String contractABI = '''[
+    {
+      "inputs": [],
+      "name": "ProofLengthWrong",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PublicInputsLengthWrong",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ShpleminiFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SumcheckFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "proof",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "publicInputs",
+          "type": "bytes32[]"
+        }
+      ],
+      "name": "verify",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]''';
 
   @override
   void initState() {
@@ -344,7 +401,7 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton.icon(
                     onPressed: (_controllerNoirA.text.isEmpty || 
                                 _controllerNoirB.text.isEmpty || 
-                                isProving) ? null : _generateProof,
+                                isProving || isVerifyingOnChain) ? null : _generateProof,
                     icon: const Icon(Icons.create),
                     label: const Text("Generate Proof"),
                     style: ElevatedButton.styleFrom(
@@ -355,9 +412,9 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: (_noirProofResult == null || isProving) ? null : _verifyProof,
+                    onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain) ? null : _verifyProof,
                     icon: const Icon(Icons.verified),
-                    label: const Text("Verify Proof"),
+                    label: const Text("Verify Local"),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -365,51 +422,113 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain || !_walletConnected) ? null : _verifyOnChain,
+              icon: isVerifyingOnChain 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cloud_done),
+              label: Text(isVerifyingOnChain ? "Verifying On-Chain..." : "Verify On-Chain"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: _walletConnected ? null : Colors.grey,
+              ),
+            ),
             if (_noirProofResult != null) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (_noirValid == true) 
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: (_noirValid == true) ? Colors.green : Colors.grey,
-                  ),
+                  border: Border.all(color: Colors.blue),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          (_noirValid == true) ? Icons.check_circle : Icons.info,
-                          color: (_noirValid == true) ? Colors.green : Colors.grey,
-                        ),
+                        const Icon(Icons.info, color: Colors.blue),
                         const SizedBox(width: 8),
                         Text(
-                          'Proof is valid: ${_noirValid ?? false}',
-                          style: TextStyle(
+                          'Proof Generated Successfully',
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: (_noirValid == true) ? Colors.green : Colors.grey,
+                            color: Colors.blue,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text('Proof Data:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
+                    Text(
+                      'Proof byte length: ${_noirProofResult!.length} bytes',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Local verification result
+                    if (_noirValid != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            (_noirValid == true) ? Icons.check_circle : Icons.cancel,
+                            color: (_noirValid == true) ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Local verification: ${_noirValid! ? "VALID" : "INVALID"}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: (_noirValid == true) ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        _noirProofResult.toString(),
-                        style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                      const SizedBox(height: 4),
+                    ],
+                    
+                    // On-chain verification result
+                    if (_onChainValid != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            (_onChainValid == true) ? Icons.check_circle : Icons.cancel,
+                            color: (_onChainValid == true) ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'On-chain verification: ${_onChainValid! ? "VALID" : "INVALID"}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: (_onChainValid == true) ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 4),
+                    ],
+                    
+                    const SizedBox(height: 8),
+                    ExpansionTile(
+                      title: const Text('Proof Data', style: TextStyle(fontWeight: FontWeight.bold)),
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _noirProofResult.toString(),
+                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -452,6 +571,7 @@ class _HomePageState extends State<HomePage> {
       isProving = false;
       _noirProofResult = noirProofResult;
       _noirValid = null; // Reset validity when new proof is generated
+      _onChainValid = null; // Reset on-chain validity when new proof is generated
     });
   }
 
@@ -487,6 +607,84 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _noirValid = valid;
       isProving = false;
+    });
+  }
+
+  Future<void> _verifyOnChain() async {
+    if (!_walletConnected) {
+      setState(() {
+        _error = Exception("Please connect your wallet first");
+      });
+      return;
+    }
+
+    if (_noirProofResult == null) {
+      setState(() {
+        _error = Exception("Please generate a proof first");
+      });
+      return;
+    }
+
+    setState(() {
+      _error = null;
+      isVerifyingOnChain = true;
+    });
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    bool? valid;
+    try {
+      // Print proof byte length
+      print("Proof byte length: ${_noirProofResult!.length}");
+      
+      // Create Web3 client
+      final rpcUrl = 'https://ethereum-sepolia.publicnode.com';
+      final httpClient = Web3Client(rpcUrl, http.Client());
+      
+      // Create contract instance
+      final contract = DeployedContract(
+        ContractAbi.fromJson(contractABI, 'HonkVerifier'),
+        EthereumAddress.fromHex(contractAddress),
+      );
+      
+      // Prepare public inputs - for this circuit, the public input is a * b
+      final a = int.parse(_controllerNoirA.text);
+      final b = int.parse(_controllerNoirB.text);
+      final publicInputValue = a * b;
+      
+      // Convert to bytes32
+      final publicInputBytes = BigInt.from(publicInputValue).toRadixString(16).padLeft(64, '0');
+      final publicInputsArray = [hex.decode(publicInputBytes)];
+      
+      // Call the verify function
+      final verifyFunction = contract.function('verify');
+      final result = await httpClient.call(
+        contract: contract,
+        function: verifyFunction,
+        params: [_noirProofResult!, publicInputsArray],
+      );
+      
+      valid = result.first as bool;
+      
+      httpClient.dispose();
+    } on Exception catch (e) {
+      print("On-chain verification error: $e");
+      valid = false;
+      setState(() {
+        _error = e;
+      });
+    } catch (e) {
+      print("On-chain verification error: $e");
+      valid = false;
+      setState(() {
+        _error = Exception(e.toString());
+      });
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _onChainValid = valid;
+      isVerifyingOnChain = false;
     });
   }
 
