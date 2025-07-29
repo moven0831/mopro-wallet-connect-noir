@@ -52,6 +52,7 @@ class _HomePageState extends State<HomePage> {
   Exception? _error;
   bool _walletConnected = false;
   bool _isInitializing = true;
+  List<String>? _proofInputs; // Store the inputs used for proof generation
 
   // Controllers to handle user input
   final TextEditingController _controllerNoirA = TextEditingController();
@@ -557,9 +558,12 @@ class _HomePageState extends State<HomePage> {
           "assets/noir_multiplier2.json",
           null,
           inputs);
+      // Store the inputs for later use in verification
+      _proofInputs = inputs;
     } on Exception catch (e) {
       print("Error: $e");
       noirProofResult = null;
+      _proofInputs = null;
       setState(() {
         _error = e;
       });
@@ -572,6 +576,10 @@ class _HomePageState extends State<HomePage> {
       _noirProofResult = noirProofResult;
       _noirValid = null; // Reset validity when new proof is generated
       _onChainValid = null; // Reset on-chain validity when new proof is generated
+      // Clear stored inputs if proof generation failed
+      if (noirProofResult == null) {
+        _proofInputs = null;
+      }
     });
   }
 
@@ -625,6 +633,8 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+
+
     setState(() {
       _error = null;
       isVerifyingOnChain = true;
@@ -639,29 +649,47 @@ class _HomePageState extends State<HomePage> {
       // Print entire proof in hex format for debugging
       print("Full proof hex: ${hex.encode(_noirProofResult!)}");
       
-      // Extract proof components from the full proof data
-      // The proof contains: 4 bytes metadata + 32 bytes public input + 14080 bytes proof
+      // Calculate sizes - only 1 public input (the result of a * b)
       const int metadataSize = 4;
-      const int publicInputSize = 32;
+      const int bytesPerPublicInput = 32;
+      const int numberOfPublicInputs = 1; // Only the result is public
+      final int totalPublicInputSize = numberOfPublicInputs * bytesPerPublicInput;
       const int expectedProofSize = 14080; // 440 * 32 bytes
       
-      if (_noirProofResult!.length != metadataSize + publicInputSize + expectedProofSize) {
-        throw Exception("Invalid proof size: expected ${metadataSize + publicInputSize + expectedProofSize}, got ${_noirProofResult!.length}");
+      print("Number of public inputs: $numberOfPublicInputs");
+      print("Total public input size: $totalPublicInputSize bytes");
+      
+      final int expectedTotalSize = metadataSize + totalPublicInputSize + expectedProofSize;
+      if (_noirProofResult!.length != expectedTotalSize) {
+        throw Exception("Invalid proof size: expected $expectedTotalSize, got ${_noirProofResult!.length}");
       }
       
       // Extract metadata (first 4 bytes)
       final metadataBytes = _noirProofResult!.sublist(0, metadataSize);
       
-      // Extract public input from the proof data
-      final publicInputBytes = _noirProofResult!.sublist(metadataSize, metadataSize + publicInputSize);
+      // Extract public inputs from the proof data
+      final publicInputBytes = _noirProofResult!.sublist(metadataSize, metadataSize + totalPublicInputSize);
       
-      // Extract raw proof bytes (skip metadata and public input)
-      final rawProofBytes = _noirProofResult!.sublist(metadataSize + publicInputSize);
+      // Extract raw proof bytes (skip metadata and public inputs)
+      final rawProofBytes = _noirProofResult!.sublist(metadataSize + totalPublicInputSize);
       
       // Print each component in hex
       print("Metadata bytes (${metadataBytes.length}): ${hex.encode(metadataBytes)}");
       print("Public input bytes (${publicInputBytes.length}): ${hex.encode(publicInputBytes)}");
       print("Raw proof bytes (${rawProofBytes.length}): ${hex.encode(rawProofBytes)}");
+      
+      // Split public inputs into individual 32-byte chunks
+      final List<Uint8List> publicInputsArray = [];
+      for (int i = 0; i < numberOfPublicInputs; i++) {
+        final startIdx = i * bytesPerPublicInput;
+        final endIdx = startIdx + bytesPerPublicInput;
+        publicInputsArray.add(publicInputBytes.sublist(startIdx, endIdx));
+      }
+      
+      print("Split public inputs into ${publicInputsArray.length} chunks of 32 bytes each");
+      for (int i = 0; i < publicInputsArray.length; i++) {
+        print("Public input $i: 0x${hex.encode(publicInputsArray[i])}");
+      }
       
       // Create Web3 client
       final rpcUrl = 'https://ethereum-sepolia.publicnode.com';
@@ -673,11 +701,8 @@ class _HomePageState extends State<HomePage> {
         EthereumAddress.fromHex(contractAddress),
       );
       
-      // Prepare proof and public inputs for the contract (web3dart expects Uint8List)
-      final publicInputsArray = [publicInputBytes];
-      
       print("Sending proof bytes (${rawProofBytes.length}): 0x${hex.encode(rawProofBytes).substring(0, 50)}...");
-      print("Sending public input bytes (${publicInputBytes.length}): 0x${hex.encode(publicInputBytes)}");
+      print("Sending ${publicInputsArray.length} public inputs to contract");
       
       // Call the verify function
       final verifyFunction = contract.function('verify');
