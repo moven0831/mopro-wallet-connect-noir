@@ -7,6 +7,17 @@
 
 A Flutter template created by [Mopro CLI](https://github.com/zkmopro/mopro/tree/main/cli) that enables Noir proof generation with barretenberg bakcend, supporting **on-chain verification** through Solidity smart contracts.
 
+## 📸 App Demo
+
+<div align="center">
+
+| Wallet Connect Integration | On-Chain Verification |
+|:-------------------------:|:---------------------:|
+| <img src="./assets/noir-wallet-connect.png" alt="Noir Wallet Connect" width="280"/> | <img src="./assets/noir-onchain-verify.png" alt="Noir On-Chain Verification" width="280"/> |
+| *Connect to 300+ wallets using Reown AppKit with deeplink* | *Generate Noir proofs on mobile and verify them on chain* |
+
+</div>
+
 ## 🚀 Quick Start
 
 ### Prerequisites
