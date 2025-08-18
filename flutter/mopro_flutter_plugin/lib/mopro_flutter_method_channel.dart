@@ -11,23 +11,43 @@ class MethodChannelMoproFlutter extends MoproFlutterPlatform {
   final methodChannel = const MethodChannel('mopro_flutter');
 
   @override
-  Future<Uint8List> generateNoirProof(
-      String circuitPath, String? srsPath, List<String> inputs) async {
+  Future<Uint8List> generateNoirKeccakProofWithVk(
+      String circuitPath, String? srsPath, Uint8List vk, List<String> inputs, 
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
     final result =
-        await methodChannel.invokeMethod<Uint8List>('generateNoirProof', {
+        await methodChannel.invokeMethod<Uint8List>('generateNoirKeccakProofWithVk', {
       'circuitPath': circuitPath,
       'srsPath': srsPath,
+      'vk': vk,
       'inputs': inputs,
+      'disableZk': disableZk,
+      'lowMemoryMode': lowMemoryMode,
     });
     return result ?? Uint8List(0);
   }
 
   @override
-  Future<bool> verifyNoirProof(String circuitPath, Uint8List proof) async {
-    final result = await methodChannel.invokeMethod<bool>('verifyNoirProof', {
+  Future<bool> verifyNoirKeccakProofWithVk(String circuitPath, Uint8List vk, Uint8List proof,
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
+    final result = await methodChannel.invokeMethod<bool>('verifyNoirKeccakProofWithVk', {
       'circuitPath': circuitPath,
+      'vk': vk,
       'proof': proof,
+      'disableZk': disableZk,
+      'lowMemoryMode': lowMemoryMode,
     });
     return result ?? false;
+  }
+
+  @override
+  Future<Uint8List> getNoirVerificationKeccakKey(String circuitPath, String? srsPath,
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
+    final result = await methodChannel.invokeMethod<Uint8List>('getNoirVerificationKeccakKey', {
+      'circuitPath': circuitPath,
+      'srsPath': srsPath,
+      'disableZk': disableZk,
+      'lowMemoryMode': lowMemoryMode,
+    });
+    return result ?? Uint8List(0);
   }
 }

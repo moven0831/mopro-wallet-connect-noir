@@ -26,12 +26,19 @@ abstract class MoproFlutterPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<Uint8List> generateNoirProof(
-      String circuitPath, String? srsPath, List<String> inputs) {
-    throw UnimplementedError('generateNoirProof() has not been implemented.');
+  Future<Uint8List> generateNoirKeccakProofWithVk(
+      String circuitPath, String? srsPath, Uint8List vk, List<String> inputs,
+      {bool disableZk = false, bool lowMemoryMode = false}) {
+    throw UnimplementedError('generateNoirKeccakProofWithVk() has not been implemented.');
   }
 
-  Future<bool> verifyNoirProof(String circuitPath, Uint8List proof) {
-    throw UnimplementedError('verifyNoirProof() has not been implemented.');
+  Future<bool> verifyNoirKeccakProofWithVk(String circuitPath, Uint8List vk, Uint8List proof,
+      {bool disableZk = false, bool lowMemoryMode = false}) {
+    throw UnimplementedError('verifyNoirKeccakProofWithVk() has not been implemented.');
+  }
+
+  Future<Uint8List> getNoirVerificationKeccakKey(String circuitPath, String? srsPath,
+      {bool disableZk = false, bool lowMemoryMode = false}) {
+    throw UnimplementedError('getNoirVerificationKeccakKey() has not been implemented.');
   }
 }

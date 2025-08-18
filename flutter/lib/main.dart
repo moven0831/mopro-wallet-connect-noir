@@ -53,14 +53,25 @@ class _HomePageState extends State<HomePage> {
   bool _walletConnected = false;
   bool _isInitializing = true;
   List<String>? _proofInputs; // Store the inputs used for proof generation
+  Uint8List? _verificationKey; // Store the loaded verification key
 
   // Controllers to handle user input
   final TextEditingController _controllerNoirA = TextEditingController();
   final TextEditingController _controllerNoirB = TextEditingController();
   
   // Smart contract details
-  static const String contractAddress = "0x593ce6b2A205591b9bD520Dce4392ef67913EE4F";
+  static const String contractAddress = "0x3C9f0361F4120D236F752035D22D1e850EA0f5E6";
   static const String contractABI = '''[
+    {
+      "inputs": [],
+      "name": "ConsistencyCheckFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "GeminiChallengeInSubgroup",
+      "type": "error"
+    },
     {
       "inputs": [],
       "name": "ProofLengthWrong",
@@ -98,7 +109,7 @@ class _HomePageState extends State<HomePage> {
       "outputs": [
         {
           "internalType": "bool",
-          "name": "",
+          "name": "verified",
           "type": "bool"
         }
       ],
@@ -112,9 +123,9 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _controllerNoirA.text = "3";
     _controllerNoirB.text = "5";
-    // Delay initialization to ensure the widget is properly built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeWalletConnect();
+      _loadVerificationKey();
     });
   }
 
@@ -184,6 +195,23 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _walletConnected = WalletConnectService.isConnected;
       });
+    }
+  }
+
+  Future<void> _loadVerificationKey() async {
+    try {
+      final byteData = await rootBundle.load('assets/noir_multiplier2.vk');
+      setState(() {
+        _verificationKey = byteData.buffer.asUint8List();
+      });
+      print('Verification key loaded successfully (${_verificationKey!.length} bytes)');
+    } catch (e) {
+      print('Failed to load verification key: $e');
+      if (mounted) {
+        setState(() {
+          _error = Exception('Failed to load verification key: $e');
+        });
+      }
     }
   }
 
@@ -379,7 +407,7 @@ class _HomePageState extends State<HomePage> {
             TextFormField(
               controller: _controllerNoirA,
               decoration: const InputDecoration(
-                labelText: "Public input `a`",
+                labelText: "Private input `a`",
                 hintText: "For example, 3",
                 border: OutlineInputBorder(),
               ),
@@ -389,7 +417,7 @@ class _HomePageState extends State<HomePage> {
             TextFormField(
               controller: _controllerNoirB,
               decoration: const InputDecoration(
-                labelText: "Public input `b`",
+                labelText: "Private input `b`",
                 hintText: "For example, 5",
                 border: OutlineInputBorder(),
               ),
@@ -402,7 +430,8 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton.icon(
                     onPressed: (_controllerNoirA.text.isEmpty || 
                                 _controllerNoirB.text.isEmpty || 
-                                isProving || isVerifyingOnChain) ? null : _generateProof,
+                                isProving || isVerifyingOnChain || 
+                                _verificationKey == null) ? null : _generateProof,
                     icon: const Icon(Icons.create),
                     label: const Text("Generate Proof"),
                     style: ElevatedButton.styleFrom(
@@ -413,7 +442,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain) ? null : _verifyProof,
+                    onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain || _verificationKey == null) ? null : _verifyProof,
                     icon: const Icon(Icons.verified),
                     label: const Text("Verify Local"),
                     style: ElevatedButton.styleFrom(
@@ -542,6 +571,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _generateProof() async {
+    if (_verificationKey == null) {
+      setState(() {
+        _error = Exception('Verification key not loaded. Please wait for initialization.');
+      });
+      return;
+    }
+
     setState(() {
       _error = null;
       isProving = true;
@@ -554,10 +590,13 @@ class _HomePageState extends State<HomePage> {
         _controllerNoirA.text,
         _controllerNoirB.text
       ];
-      noirProofResult = await _moproFlutterPlugin.generateNoirProof(
+      noirProofResult = await _moproFlutterPlugin.generateNoirKeccakProofWithVk(
           "assets/noir_multiplier2.json",
-          null,
-          inputs);
+          "assets/noir_multiplier2.srs",
+          _verificationKey!,
+          inputs,
+          disableZk: false,
+          lowMemoryMode: false);
       // Store the inputs for later use in verification
       _proofInputs = inputs;
     } on Exception catch (e) {
@@ -584,6 +623,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _verifyProof() async {
+    if (_verificationKey == null) {
+      setState(() {
+        _error = Exception('Verification key not loaded. Please wait for initialization.');
+      });
+      return;
+    }
+
     setState(() {
       _error = null;
       isProving = true;
@@ -593,9 +639,12 @@ class _HomePageState extends State<HomePage> {
     bool? valid;
     try {
       var proofResult = _noirProofResult;
-      valid = await _moproFlutterPlugin.verifyNoirProof(
+      valid = await _moproFlutterPlugin.verifyNoirKeccakProofWithVk(
           "assets/noir_multiplier2.json",
-          proofResult!);
+          _verificationKey!,
+          proofResult!,
+          disableZk: false,
+          lowMemoryMode: false);
     } on Exception catch (e) {
       print("Error: $e");
       valid = false;
@@ -633,8 +682,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-
-
     setState(() {
       _error = null;
       isVerifyingOnChain = true;
@@ -643,54 +690,30 @@ class _HomePageState extends State<HomePage> {
     FocusManager.instance.primaryFocus?.unfocus();
     bool? valid;
     try {
-      // Print proof byte length
-      print("Proof byte length: ${_noirProofResult!.length}");
+      final originalProof = _noirProofResult!;
+      final rawInputs = _proofInputs!;
       
-      // Print entire proof in hex format for debugging
-      print("Full proof hex: ${hex.encode(_noirProofResult!)}");
+      // Calculate the public input (result of multiplication)
+      final a = int.parse(rawInputs[0]);
+      final b = int.parse(rawInputs[1]);
+      final result = a * b;
       
-      // Calculate sizes - only 1 public input (the result of a * b)
-      const int metadataSize = 4;
-      const int bytesPerPublicInput = 32;
-      const int numberOfPublicInputs = 1; // Only the result is public
-      final int totalPublicInputSize = numberOfPublicInputs * bytesPerPublicInput;
-      const int expectedProofSize = 14080; // 440 * 32 bytes
-      
-      print("Number of public inputs: $numberOfPublicInputs");
-      print("Total public input size: $totalPublicInputSize bytes");
-      
-      final int expectedTotalSize = metadataSize + totalPublicInputSize + expectedProofSize;
-      if (_noirProofResult!.length != expectedTotalSize) {
-        throw Exception("Invalid proof size: expected $expectedTotalSize, got ${_noirProofResult!.length}");
-      }
-      
-      // Extract metadata (first 4 bytes)
-      final metadataBytes = _noirProofResult!.sublist(0, metadataSize);
-      
-      // Extract public inputs from the proof data
-      final publicInputBytes = _noirProofResult!.sublist(metadataSize, metadataSize + totalPublicInputSize);
-      
-      // Extract raw proof bytes (skip metadata and public inputs)
-      final rawProofBytes = _noirProofResult!.sublist(metadataSize + totalPublicInputSize);
-      
-      // Print each component in hex
-      print("Metadata bytes (${metadataBytes.length}): ${hex.encode(metadataBytes)}");
-      print("Public input bytes (${publicInputBytes.length}): ${hex.encode(publicInputBytes)}");
-      print("Raw proof bytes (${rawProofBytes.length}): ${hex.encode(rawProofBytes)}");
-      
-      // Split public inputs into individual 32-byte chunks
-      final List<Uint8List> publicInputsArray = [];
-      for (int i = 0; i < numberOfPublicInputs; i++) {
-        final startIdx = i * bytesPerPublicInput;
-        final endIdx = startIdx + bytesPerPublicInput;
-        publicInputsArray.add(publicInputBytes.sublist(startIdx, endIdx));
-      }
-      
-      print("Split public inputs into ${publicInputsArray.length} chunks of 32 bytes each");
-      for (int i = 0; i < publicInputsArray.length; i++) {
-        print("Public input $i: 0x${hex.encode(publicInputsArray[i])}");
-      }
-      
+      // Convert the result to bytes32 format for smart contract
+      final publicInputs = [result].map((input) {
+        // Parse the input as a BigInt and convert to 32-byte array
+        final bigIntValue = BigInt.from(input);
+        final hexString = bigIntValue.toRadixString(16).padLeft(64, '0');
+        return Uint8List.fromList(hex.decode(hexString));
+      }).toList();
+
+      // Strip public inputs from the beginning of the proof
+      // Each public input takes 32 bytes at the start of the proof
+      final bytesToStrip = publicInputs.length * 32;
+      final proof = Uint8List.fromList(originalProof.skip(bytesToStrip).toList());
+
+      print('Proof: ${hex.encode(proof)}');
+      print('Public inputs: ${publicInputs.map((input) => hex.encode(input)).join(', ')}');
+
       // Create Web3 client
       final rpcUrl = 'https://ethereum-sepolia.publicnode.com';
       final httpClient = Web3Client(rpcUrl, http.Client());
@@ -700,19 +723,16 @@ class _HomePageState extends State<HomePage> {
         ContractAbi.fromJson(contractABI, 'HonkVerifier'),
         EthereumAddress.fromHex(contractAddress),
       );
-      
-      print("Sending proof bytes (${rawProofBytes.length}): 0x${hex.encode(rawProofBytes).substring(0, 50)}...");
-      print("Sending ${publicInputsArray.length} public inputs to contract");
-      
+
       // Call the verify function
       final verifyFunction = contract.function('verify');
-      final result = await httpClient.call(
+      final verifyResult = await httpClient.call(
         contract: contract,
         function: verifyFunction,
-        params: [rawProofBytes, publicInputsArray],
+        params: [proof, publicInputs],
       );
       
-      valid = result.first as bool;
+      valid = verifyResult.first as bool;
       
       httpClient.dispose();
     } on Exception catch (e) {

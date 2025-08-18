@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(moproFFI)
-import moproFFI
+#if canImport(mopro_wallet_connect_noirFFI)
+import mopro_wallet_connect_noirFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -1122,12 +1122,46 @@ public func generateHalo2Proof(srsPath: String, pkPath: String, circuitInputs: [
     )
 })
 }
-public func generateNoirProof(circuitPath: String, srsPath: String?, inputs: [String])throws  -> Data  {
+public func generateNoirKeccakProof(circuitPath: String, srsPath: String?, inputs: [String], disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
+    uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof(
+        FfiConverterString.lower(circuitPath),
+        FfiConverterOptionString.lower(srsPath),
+        FfiConverterSequenceString.lower(inputs),
+        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(lowMemoryMode),$0
+    )
+})
+}
+public func generateNoirKeccakProofWithVk(circuitPath: String, srsPath: String?, vk: Data, inputs: [String], disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
+    uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof_with_vk(
+        FfiConverterString.lower(circuitPath),
+        FfiConverterOptionString.lower(srsPath),
+        FfiConverterData.lower(vk),
+        FfiConverterSequenceString.lower(inputs),
+        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(lowMemoryMode),$0
+    )
+})
+}
+public func generateNoirProof(circuitPath: String, srsPath: String?, inputs: [String], lowMemoryMode: Bool)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
     uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_proof(
         FfiConverterString.lower(circuitPath),
         FfiConverterOptionString.lower(srsPath),
-        FfiConverterSequenceString.lower(inputs),$0
+        FfiConverterSequenceString.lower(inputs),
+        FfiConverterBool.lower(lowMemoryMode),$0
+    )
+})
+}
+public func getNoirVerificationKeccakKey(circuitPath: String, srsPath: String?, disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
+    uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_keccak_key(
+        FfiConverterString.lower(circuitPath),
+        FfiConverterOptionString.lower(srsPath),
+        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(lowMemoryMode),$0
     )
 })
 }
@@ -1160,11 +1194,33 @@ public func verifyHalo2Proof(srsPath: String, vkPath: String, proof: Data, publi
     )
 })
 }
-public func verifyNoirProof(circuitPath: String, proof: Data)throws  -> Bool  {
+public func verifyNoirKeccakProof(circuitPath: String, proof: Data, disableZk: Bool, lowMemoryMode: Bool)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
+    uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof(
+        FfiConverterString.lower(circuitPath),
+        FfiConverterData.lower(proof),
+        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(lowMemoryMode),$0
+    )
+})
+}
+public func verifyNoirKeccakProofWithVk(circuitPath: String, vk: Data, proof: Data, disableZk: Bool, lowMemoryMode: Bool)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
+    uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof_with_vk(
+        FfiConverterString.lower(circuitPath),
+        FfiConverterData.lower(vk),
+        FfiConverterData.lower(proof),
+        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(lowMemoryMode),$0
+    )
+})
+}
+public func verifyNoirProof(circuitPath: String, proof: Data, lowMemoryMode: Bool)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
     uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_proof(
         FfiConverterString.lower(circuitPath),
-        FfiConverterData.lower(proof),$0
+        FfiConverterData.lower(proof),
+        FfiConverterBool.lower(lowMemoryMode),$0
     )
 })
 }
@@ -1190,7 +1246,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_halo2_proof() != 32033) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 35598) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof() != 45636) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof_with_vk() != 3686) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 65240) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_keccak_key() != 17707) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world() != 38115) {
@@ -1202,7 +1267,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_halo2_proof() != 56166) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 9674) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof() != 7933) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof_with_vk() != 2770) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 18089) {
         return InitializationResult.apiChecksumMismatch
     }
 

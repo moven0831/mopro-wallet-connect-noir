@@ -7,8 +7,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import uniffi.mopro.generateNoirProof
-import uniffi.mopro.verifyNoirProof
+import uniffi.mopro.generateNoirKeccakProofWithVk
+import uniffi.mopro.verifyNoirKeccakProofWithVk
+import uniffi.mopro.getNoirVerificationKeccakKey
 
 /** MoproFlutterPlugin */
 class MoproFlutterPlugin : FlutterPlugin, MethodCallHandler {
@@ -24,7 +25,7 @@ class MoproFlutterPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-        if (call.method == "generateNoirProof") {
+        if (call.method == "generateNoirKeccakProofWithVk") {
             val circuitPath = call.argument<String>("circuitPath") ?: return result.error(
                 "ARGUMENT_ERROR",
                 "Missing circuitPath",
@@ -33,18 +34,33 @@ class MoproFlutterPlugin : FlutterPlugin, MethodCallHandler {
 
             val srsPath = call.argument<String>("srsPath")
 
+            val vk = call.argument<ByteArray>("vk") ?: return result.error(
+                "ARGUMENT_ERROR",
+                "Missing vk",
+                null
+            )
+
             val inputs = call.argument<List<String>>("inputs") ?: return result.error(
                 "ARGUMENT_ERROR",
                 "Missing inputs",
                 null
             )
 
-            val res = generateNoirProof(circuitPath, srsPath, inputs)
+            val disableZk = call.argument<Boolean>("disableZk") ?: false
+            val lowMemoryMode = call.argument<Boolean>("lowMemoryMode") ?: false
+
+            val res = generateNoirKeccakProofWithVk(circuitPath, srsPath, vk, inputs, disableZk, lowMemoryMode)
             result.success(res)
-        } else if (call.method == "verifyNoirProof") {
+        } else if (call.method == "verifyNoirKeccakProofWithVk") {
             val circuitPath = call.argument<String>("circuitPath") ?: return result.error(
                 "ARGUMENT_ERROR",
                 "Missing circuitPath",
+                null
+            )
+
+            val vk = call.argument<ByteArray>("vk") ?: return result.error(
+                "ARGUMENT_ERROR",
+                "Missing vk",
                 null
             )
 
@@ -54,7 +70,23 @@ class MoproFlutterPlugin : FlutterPlugin, MethodCallHandler {
                 null
             )
 
-            val res = verifyNoirProof(circuitPath, proof)
+            val disableZk = call.argument<Boolean>("disableZk") ?: false
+            val lowMemoryMode = call.argument<Boolean>("lowMemoryMode") ?: false
+
+            val res = verifyNoirKeccakProofWithVk(circuitPath, vk, proof, disableZk, lowMemoryMode)
+            result.success(res)
+        } else if (call.method == "getNoirVerificationKeccakKey") {
+            val circuitPath = call.argument<String>("circuitPath") ?: return result.error(
+                "ARGUMENT_ERROR",
+                "Missing circuitPath",
+                null
+            )
+
+            val srsPath = call.argument<String>("srsPath")
+            val disableZk = call.argument<Boolean>("disableZk") ?: false
+            val lowMemoryMode = call.argument<Boolean>("lowMemoryMode") ?: false
+
+            val res = getNoirVerificationKeccakKey(circuitPath, srsPath, disableZk, lowMemoryMode)
             result.success(res)
         } else {
             result.notImplemented()

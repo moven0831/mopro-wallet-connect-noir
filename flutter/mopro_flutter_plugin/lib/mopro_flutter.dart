@@ -23,19 +23,34 @@ class MoproFlutter {
     return file.path; // Return the file path
   }
 
-  Future<Uint8List> generateNoirProof(
-      String circuitFile, String? srsFile, List<String> inputs) async {
+  Future<Uint8List> generateNoirKeccakProofWithVk(
+      String circuitFile, String? srsFile, Uint8List vk, List<String> inputs,
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
     String circuitPath = await copyAssetToFileSystem(circuitFile);
     String? srsPath;
     if (srsFile != null) {
       srsPath = await copyAssetToFileSystem(srsFile);
     }
     return await MoproFlutterPlatform.instance
-        .generateNoirProof(circuitPath, srsPath, inputs);
+        .generateNoirKeccakProofWithVk(circuitPath, srsPath, vk, inputs, 
+            disableZk: disableZk, lowMemoryMode: lowMemoryMode);
   }
 
-  Future<bool> verifyNoirProof(String circuitFile, Uint8List proof) async {
+  Future<bool> verifyNoirKeccakProofWithVk(String circuitFile, Uint8List vk, Uint8List proof,
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
     String circuitPath = await copyAssetToFileSystem(circuitFile);
-    return await MoproFlutterPlatform.instance.verifyNoirProof(circuitPath, proof);
+    return await MoproFlutterPlatform.instance.verifyNoirKeccakProofWithVk(circuitPath, vk, proof,
+        disableZk: disableZk, lowMemoryMode: lowMemoryMode);
+  }
+
+  Future<Uint8List> getNoirVerificationKeccakKey(String circuitFile, String? srsFile,
+      {bool disableZk = false, bool lowMemoryMode = false}) async {
+    String circuitPath = await copyAssetToFileSystem(circuitFile);
+    String? srsPath;
+    if (srsFile != null) {
+      srsPath = await copyAssetToFileSystem(srsFile);
+    }
+    return await MoproFlutterPlatform.instance.getNoirVerificationKeccakKey(circuitPath, srsPath,
+        disableZk: disableZk, lowMemoryMode: lowMemoryMode);
   }
 }
