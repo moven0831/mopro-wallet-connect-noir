@@ -764,27 +764,25 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 // when the library is loaded.
 internal interface IntegrityCheckingUniffiLib : Library {
     // Integrity check functions only
+    fun uniffi_mopro_wallet_connect_noir_checksum_func_combine_proof_and_public_inputs(): Short
+
     fun uniffi_mopro_wallet_connect_noir_checksum_func_generate_circom_proof(): Short
 
     fun uniffi_mopro_wallet_connect_noir_checksum_func_generate_halo2_proof(): Short
 
-    fun uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof(): Short
-
-    fun uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof_with_vk(): Short
-
     fun uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof(): Short
 
-    fun uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_keccak_key(): Short
+    fun uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_key(): Short
+
+    fun uniffi_mopro_wallet_connect_noir_checksum_func_get_num_public_inputs_from_circuit(): Short
 
     fun uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world(): Short
+
+    fun uniffi_mopro_wallet_connect_noir_checksum_func_parse_proof_with_public_inputs(): Short
 
     fun uniffi_mopro_wallet_connect_noir_checksum_func_verify_circom_proof(): Short
 
     fun uniffi_mopro_wallet_connect_noir_checksum_func_verify_halo2_proof(): Short
-
-    fun uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof(): Short
-
-    fun uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof_with_vk(): Short
 
     fun uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof(): Short
 
@@ -830,6 +828,12 @@ internal interface UniffiLib : Library {
     }
 
     // FFI functions
+    fun uniffi_mopro_wallet_connect_noir_fn_func_combine_proof_and_public_inputs(
+        `proof`: RustBuffer.ByValue,
+        `publicInputs`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
     fun uniffi_mopro_wallet_connect_noir_fn_func_generate_circom_proof(
         `zkeyPath`: RustBuffer.ByValue,
         `circuitInputs`: RustBuffer.ByValue,
@@ -844,42 +848,36 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
-    fun uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof(
-        `circuitPath`: RustBuffer.ByValue,
-        `srsPath`: RustBuffer.ByValue,
-        `inputs`: RustBuffer.ByValue,
-        `disableZk`: Byte,
-        `lowMemoryMode`: Byte,
-        uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-
-    fun uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof_with_vk(
-        `circuitPath`: RustBuffer.ByValue,
-        `srsPath`: RustBuffer.ByValue,
-        `vk`: RustBuffer.ByValue,
-        `inputs`: RustBuffer.ByValue,
-        `disableZk`: Byte,
-        `lowMemoryMode`: Byte,
-        uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-
     fun uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_proof(
         `circuitPath`: RustBuffer.ByValue,
         `srsPath`: RustBuffer.ByValue,
         `inputs`: RustBuffer.ByValue,
+        `onChain`: Byte,
+        `vk`: RustBuffer.ByValue,
         `lowMemoryMode`: Byte,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
-    fun uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_keccak_key(
+    fun uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_key(
         `circuitPath`: RustBuffer.ByValue,
         `srsPath`: RustBuffer.ByValue,
-        `disableZk`: Byte,
+        `onChain`: Byte,
         `lowMemoryMode`: Byte,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
+    fun uniffi_mopro_wallet_connect_noir_fn_func_get_num_public_inputs_from_circuit(
+        `circuitPath`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Int
+
     fun uniffi_mopro_wallet_connect_noir_fn_func_mopro_uniffi_hello_world(uniffi_out_err: UniffiRustCallStatus): RustBuffer.ByValue
+
+    fun uniffi_mopro_wallet_connect_noir_fn_func_parse_proof_with_public_inputs(
+        `proof`: RustBuffer.ByValue,
+        `numPublicInputs`: Int,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
 
     fun uniffi_mopro_wallet_connect_noir_fn_func_verify_circom_proof(
         `zkeyPath`: RustBuffer.ByValue,
@@ -896,26 +894,11 @@ internal interface UniffiLib : Library {
         uniffi_out_err: UniffiRustCallStatus,
     ): Byte
 
-    fun uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof(
-        `circuitPath`: RustBuffer.ByValue,
-        `proof`: RustBuffer.ByValue,
-        `disableZk`: Byte,
-        `lowMemoryMode`: Byte,
-        uniffi_out_err: UniffiRustCallStatus,
-    ): Byte
-
-    fun uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof_with_vk(
-        `circuitPath`: RustBuffer.ByValue,
-        `vk`: RustBuffer.ByValue,
-        `proof`: RustBuffer.ByValue,
-        `disableZk`: Byte,
-        `lowMemoryMode`: Byte,
-        uniffi_out_err: UniffiRustCallStatus,
-    ): Byte
-
     fun uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_proof(
         `circuitPath`: RustBuffer.ByValue,
         `proof`: RustBuffer.ByValue,
+        `onChain`: Byte,
+        `vk`: RustBuffer.ByValue,
         `lowMemoryMode`: Byte,
         uniffi_out_err: UniffiRustCallStatus,
     ): Byte
@@ -1149,25 +1132,28 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_combine_proof_and_public_inputs() != 1877.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_circom_proof() != 34456.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_halo2_proof() != 32033.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof() != 45636.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 22341.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof_with_vk() != 3686.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_key() != 39944.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 65240.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_get_num_public_inputs_from_circuit() != 8643.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_keccak_key() != 17707.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world() != 53178.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world() != 38115.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_parse_proof_with_public_inputs() != 39945.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_circom_proof() != 47338.toShort()) {
@@ -1176,13 +1162,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_halo2_proof() != 56166.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof() != 7933.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof_with_vk() != 2770.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
-    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 18089.toShort()) {
+    if (lib.uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 4760.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1239,6 +1219,26 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
  * @suppress
  * */
 object NoPointer
+
+/**
+ * @suppress
+ */
+public object FfiConverterUInt : FfiConverter<UInt, Int> {
+    override fun lift(value: Int): UInt = value.toUInt()
+
+    override fun read(buf: ByteBuffer): UInt = lift(buf.getInt())
+
+    override fun lower(value: UInt): Int = value.toInt()
+
+    override fun allocationSize(value: UInt) = 4UL
+
+    override fun write(
+        value: UInt,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.toInt())
+    }
+}
 
 /**
  * @suppress
@@ -1522,6 +1522,54 @@ public object FfiConverterTypeHalo2ProofResult : FfiConverterRustBuffer<Halo2Pro
     }
 }
 
+/**
+ * Struct to hold split proof data
+ */
+data class ProofWithPublicInputs(
+    /**
+     * The proof without public inputs
+     */
+    var `proof`: kotlin.ByteArray,
+    /**
+     * The public inputs as an array of 32-byte values
+     */
+    var `publicInputs`: List<kotlin.ByteArray>,
+    /**
+     * The number of public inputs
+     */
+    var `numPublicInputs`: kotlin.UInt,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProofWithPublicInputs : FfiConverterRustBuffer<ProofWithPublicInputs> {
+    override fun read(buf: ByteBuffer): ProofWithPublicInputs =
+        ProofWithPublicInputs(
+            FfiConverterByteArray.read(buf),
+            FfiConverterSequenceByteArray.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+
+    override fun allocationSize(value: ProofWithPublicInputs) =
+        (
+            FfiConverterByteArray.allocationSize(value.`proof`) +
+                FfiConverterSequenceByteArray.allocationSize(value.`publicInputs`) +
+                FfiConverterUInt.allocationSize(value.`numPublicInputs`)
+        )
+
+    override fun write(
+        value: ProofWithPublicInputs,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterByteArray.write(value.`proof`, buf)
+        FfiConverterSequenceByteArray.write(value.`publicInputs`, buf)
+        FfiConverterUInt.write(value.`numPublicInputs`, buf)
+    }
+}
+
 sealed class MoproException : kotlin.Exception() {
     class CircomException(
         val v1: kotlin.String,
@@ -1705,6 +1753,34 @@ public object FfiConverterSequenceString : FfiConverterRustBuffer<List<kotlin.St
 /**
  * @suppress
  */
+public object FfiConverterSequenceByteArray : FfiConverterRustBuffer<List<kotlin.ByteArray>> {
+    override fun read(buf: ByteBuffer): List<kotlin.ByteArray> {
+        val len = buf.getInt()
+        return List<kotlin.ByteArray>(len) {
+            FfiConverterByteArray.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.ByteArray>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterByteArray.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(
+        value: List<kotlin.ByteArray>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterByteArray.write(it, buf)
+        }
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterMapStringSequenceString : FfiConverterRustBuffer<Map<kotlin.String, List<kotlin.String>>> {
     override fun read(buf: ByteBuffer): Map<kotlin.String, List<kotlin.String>> {
         val len = buf.getInt()
@@ -1743,6 +1819,23 @@ public object FfiConverterMapStringSequenceString : FfiConverterRustBuffer<Map<k
     }
 }
 
+/**
+ * Combine proof and public inputs back into a single proof with public inputs
+ */
+fun `combineProofAndPublicInputs`(
+    `proof`: kotlin.ByteArray,
+    `publicInputs`: List<kotlin.ByteArray>,
+): kotlin.ByteArray =
+    FfiConverterByteArray.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_combine_proof_and_public_inputs(
+                FfiConverterByteArray.lower(`proof`),
+                FfiConverterSequenceByteArray.lower(`publicInputs`),
+                _status,
+            )
+        },
+    )
+
 @Throws(MoproException::class)
 fun `generateCircomProof`(
     `zkeyPath`: kotlin.String,
@@ -1778,54 +1871,12 @@ fun `generateHalo2Proof`(
     )
 
 @Throws(MoproException::class)
-fun `generateNoirKeccakProof`(
-    `circuitPath`: kotlin.String,
-    `srsPath`: kotlin.String?,
-    `inputs`: List<kotlin.String>,
-    `disableZk`: kotlin.Boolean,
-    `lowMemoryMode`: kotlin.Boolean,
-): kotlin.ByteArray =
-    FfiConverterByteArray.lift(
-        uniffiRustCallWithError(MoproException) { _status ->
-            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof(
-                FfiConverterString.lower(`circuitPath`),
-                FfiConverterOptionalString.lower(`srsPath`),
-                FfiConverterSequenceString.lower(`inputs`),
-                FfiConverterBoolean.lower(`disableZk`),
-                FfiConverterBoolean.lower(`lowMemoryMode`),
-                _status,
-            )
-        },
-    )
-
-@Throws(MoproException::class)
-fun `generateNoirKeccakProofWithVk`(
-    `circuitPath`: kotlin.String,
-    `srsPath`: kotlin.String?,
-    `vk`: kotlin.ByteArray,
-    `inputs`: List<kotlin.String>,
-    `disableZk`: kotlin.Boolean,
-    `lowMemoryMode`: kotlin.Boolean,
-): kotlin.ByteArray =
-    FfiConverterByteArray.lift(
-        uniffiRustCallWithError(MoproException) { _status ->
-            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof_with_vk(
-                FfiConverterString.lower(`circuitPath`),
-                FfiConverterOptionalString.lower(`srsPath`),
-                FfiConverterByteArray.lower(`vk`),
-                FfiConverterSequenceString.lower(`inputs`),
-                FfiConverterBoolean.lower(`disableZk`),
-                FfiConverterBoolean.lower(`lowMemoryMode`),
-                _status,
-            )
-        },
-    )
-
-@Throws(MoproException::class)
 fun `generateNoirProof`(
     `circuitPath`: kotlin.String,
     `srsPath`: kotlin.String?,
     `inputs`: List<kotlin.String>,
+    `onChain`: kotlin.Boolean,
+    `vk`: kotlin.ByteArray,
     `lowMemoryMode`: kotlin.Boolean,
 ): kotlin.ByteArray =
     FfiConverterByteArray.lift(
@@ -1834,6 +1885,8 @@ fun `generateNoirProof`(
                 FfiConverterString.lower(`circuitPath`),
                 FfiConverterOptionalString.lower(`srsPath`),
                 FfiConverterSequenceString.lower(`inputs`),
+                FfiConverterBoolean.lower(`onChain`),
+                FfiConverterByteArray.lower(`vk`),
                 FfiConverterBoolean.lower(`lowMemoryMode`),
                 _status,
             )
@@ -1841,18 +1894,18 @@ fun `generateNoirProof`(
     )
 
 @Throws(MoproException::class)
-fun `getNoirVerificationKeccakKey`(
+fun `getNoirVerificationKey`(
     `circuitPath`: kotlin.String,
     `srsPath`: kotlin.String?,
-    `disableZk`: kotlin.Boolean,
+    `onChain`: kotlin.Boolean,
     `lowMemoryMode`: kotlin.Boolean,
 ): kotlin.ByteArray =
     FfiConverterByteArray.lift(
         uniffiRustCallWithError(MoproException) { _status ->
-            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_keccak_key(
+            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_key(
                 FfiConverterString.lower(`circuitPath`),
                 FfiConverterOptionalString.lower(`srsPath`),
-                FfiConverterBoolean.lower(`disableZk`),
+                FfiConverterBoolean.lower(`onChain`),
                 FfiConverterBoolean.lower(`lowMemoryMode`),
                 _status,
             )
@@ -1860,13 +1913,39 @@ fun `getNoirVerificationKeccakKey`(
     )
 
 /**
- * You can also customize the bindings by #[uniffi::export]
- * Reference: https://mozilla.github.io/uniffi-rs/latest/proc_macro/index.html
+ * Get the number of public inputs for a given circuit
  */
+fun `getNumPublicInputsFromCircuit`(`circuitPath`: kotlin.String): kotlin.UInt =
+    FfiConverterUInt.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_get_num_public_inputs_from_circuit(
+                FfiConverterString.lower(`circuitPath`),
+                _status,
+            )
+        },
+    )
+
 fun `moproUniffiHelloWorld`(): kotlin.String =
     FfiConverterString.lift(
         uniffiRustCall { _status ->
             UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_mopro_uniffi_hello_world(_status)
+        },
+    )
+
+/**
+ * Parse a proof into proof bytes and public inputs
+ */
+fun `parseProofWithPublicInputs`(
+    `proof`: kotlin.ByteArray,
+    `numPublicInputs`: kotlin.UInt,
+): ProofWithPublicInputs =
+    FfiConverterTypeProofWithPublicInputs.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_parse_proof_with_public_inputs(
+                FfiConverterByteArray.lower(`proof`),
+                FfiConverterUInt.lower(`numPublicInputs`),
+                _status,
+            )
         },
     )
 
@@ -1907,49 +1986,11 @@ fun `verifyHalo2Proof`(
     )
 
 @Throws(MoproException::class)
-fun `verifyNoirKeccakProof`(
-    `circuitPath`: kotlin.String,
-    `proof`: kotlin.ByteArray,
-    `disableZk`: kotlin.Boolean,
-    `lowMemoryMode`: kotlin.Boolean,
-): kotlin.Boolean =
-    FfiConverterBoolean.lift(
-        uniffiRustCallWithError(MoproException) { _status ->
-            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof(
-                FfiConverterString.lower(`circuitPath`),
-                FfiConverterByteArray.lower(`proof`),
-                FfiConverterBoolean.lower(`disableZk`),
-                FfiConverterBoolean.lower(`lowMemoryMode`),
-                _status,
-            )
-        },
-    )
-
-@Throws(MoproException::class)
-fun `verifyNoirKeccakProofWithVk`(
-    `circuitPath`: kotlin.String,
-    `vk`: kotlin.ByteArray,
-    `proof`: kotlin.ByteArray,
-    `disableZk`: kotlin.Boolean,
-    `lowMemoryMode`: kotlin.Boolean,
-): kotlin.Boolean =
-    FfiConverterBoolean.lift(
-        uniffiRustCallWithError(MoproException) { _status ->
-            UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof_with_vk(
-                FfiConverterString.lower(`circuitPath`),
-                FfiConverterByteArray.lower(`vk`),
-                FfiConverterByteArray.lower(`proof`),
-                FfiConverterBoolean.lower(`disableZk`),
-                FfiConverterBoolean.lower(`lowMemoryMode`),
-                _status,
-            )
-        },
-    )
-
-@Throws(MoproException::class)
 fun `verifyNoirProof`(
     `circuitPath`: kotlin.String,
     `proof`: kotlin.ByteArray,
+    `onChain`: kotlin.Boolean,
+    `vk`: kotlin.ByteArray,
     `lowMemoryMode`: kotlin.Boolean,
 ): kotlin.Boolean =
     FfiConverterBoolean.lift(
@@ -1957,6 +1998,8 @@ fun `verifyNoirProof`(
             UniffiLib.INSTANCE.uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_proof(
                 FfiConverterString.lower(`circuitPath`),
                 FfiConverterByteArray.lower(`proof`),
+                FfiConverterBoolean.lower(`onChain`),
+                FfiConverterByteArray.lower(`vk`),
                 FfiConverterBoolean.lower(`lowMemoryMode`),
                 _status,
             )

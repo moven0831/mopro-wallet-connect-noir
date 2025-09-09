@@ -10,44 +10,60 @@ class MethodChannelMoproFlutter extends MoproFlutterPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('mopro_flutter');
 
+  // New API methods matching latest demo patterns
   @override
-  Future<Uint8List> generateNoirKeccakProofWithVk(
-      String circuitPath, String? srsPath, Uint8List vk, List<String> inputs, 
-      {bool disableZk = false, bool lowMemoryMode = false}) async {
-    final result =
-        await methodChannel.invokeMethod<Uint8List>('generateNoirKeccakProofWithVk', {
+  Future<Uint8List> generateNoirProof(
+      String circuitPath, String? srsPath, List<String> inputs, bool onChain, Uint8List vk, bool lowMemoryMode) async {
+    final result = await methodChannel.invokeMethod<Uint8List>('generateNoirProof', {
       'circuitPath': circuitPath,
       'srsPath': srsPath,
-      'vk': vk,
       'inputs': inputs,
-      'disableZk': disableZk,
+      'onChain': onChain,
+      'vk': vk,
       'lowMemoryMode': lowMemoryMode,
     });
     return result ?? Uint8List(0);
   }
 
   @override
-  Future<bool> verifyNoirKeccakProofWithVk(String circuitPath, Uint8List vk, Uint8List proof,
-      {bool disableZk = false, bool lowMemoryMode = false}) async {
-    final result = await methodChannel.invokeMethod<bool>('verifyNoirKeccakProofWithVk', {
+  Future<bool> verifyNoirProof(String circuitPath, Uint8List proof, bool onChain, Uint8List vk, bool lowMemoryMode) async {
+    final result = await methodChannel.invokeMethod<bool>('verifyNoirProof', {
       'circuitPath': circuitPath,
-      'vk': vk,
       'proof': proof,
-      'disableZk': disableZk,
+      'onChain': onChain,
+      'vk': vk,
       'lowMemoryMode': lowMemoryMode,
     });
     return result ?? false;
   }
 
   @override
-  Future<Uint8List> getNoirVerificationKeccakKey(String circuitPath, String? srsPath,
-      {bool disableZk = false, bool lowMemoryMode = false}) async {
-    final result = await methodChannel.invokeMethod<Uint8List>('getNoirVerificationKeccakKey', {
+  Future<Uint8List> getNoirVerificationKey(String circuitPath, String? srsPath, bool onChain, bool lowMemoryMode) async {
+    final result = await methodChannel.invokeMethod<Uint8List>('getNoirVerificationKey', {
       'circuitPath': circuitPath,
       'srsPath': srsPath,
-      'disableZk': disableZk,
+      'onChain': onChain,
       'lowMemoryMode': lowMemoryMode,
     });
     return result ?? Uint8List(0);
   }
+
+
+  @override
+  Future<int> getNumPublicInputsFromCircuit(String circuitPath) async {
+    final result = await methodChannel.invokeMethod<int>('getNumPublicInputsFromCircuit', {
+      'circuitPath': circuitPath,
+    });
+    return result ?? 0;
+  }
+
+  @override
+  Future<ProofWithPublicInputs> parseProofWithPublicInputs(Uint8List proof, int numPublicInputs) async {
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>('parseProofWithPublicInputs', {
+      'proof': proof,
+      'numPublicInputs': numPublicInputs,
+    });
+    return ProofWithPublicInputs.fromMap(Map<String, dynamic>.from(result ?? {}));
+  }
+
 }

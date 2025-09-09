@@ -12,12 +12,14 @@ crate-type = ["lib", "cdylib", "staticlib"]
 default = ["mopro-ffi/noir"]
 
 [dependencies]
-mopro-wasm = { git = "https://github.com/moven0831/mopro.git", branch = "noir-1.0.0-beta.8-3" }
-mopro-ffi = { git = "https://github.com/moven0831/mopro.git", features = ["uniffi"], branch = "noir-1.0.0-beta.8-3" }
-noir = { git = "https://github.com/zkmopro/noir-rs", features = ["barretenberg", "android-compat"] }
+mopro-wasm = { git = "https://github.com/zkmopro/mopro.git" }
+mopro-ffi = { git = "https://github.com/zkmopro/mopro.git", features = ["uniffi"] }
+noir = { git = "https://github.com/zkmopro/noir-rs", branch = "v1.0.0-beta.8-3", features = ["barretenberg", "android-compat"] }
 rust-witness = "0.1"
 num-bigint = "0.4.0"
 thiserror = "2.0.12"
+serial_test = "3.2.0"
+serde_json = "1.0.94"
 
 [build-dependencies]
 rust-witness = "0.1"
