@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:mopro_flutter/mopro_flutter.dart';
+import 'package:mopro_flutter/mopro_types.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:convert/convert.dart';
 import 'package:http/http.dart' as http;
@@ -200,6 +201,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadVerificationKey() async {
     try {
+      // Load existing verification key from assets
       final byteData = await rootBundle.load('assets/noir_multiplier2.vk');
       setState(() {
         _verificationKey = byteData.buffer.asUint8List();
@@ -454,7 +456,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain || !_walletConnected) ? null : _verifyOnChain,
+              onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain) ? null : _verifyOnChain,
               icon: isVerifyingOnChain 
                   ? const SizedBox(
                       width: 16,
@@ -465,7 +467,6 @@ class _HomePageState extends State<HomePage> {
               label: Text(isVerifyingOnChain ? "Verifying On-Chain..." : "Verify On-Chain"),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: _walletConnected ? null : Colors.grey,
               ),
             ),
             if (_noirProofResult != null) ...[
@@ -590,13 +591,13 @@ class _HomePageState extends State<HomePage> {
         _controllerNoirA.text,
         _controllerNoirB.text
       ];
-      noirProofResult = await _moproFlutterPlugin.generateNoirKeccakProofWithVk(
+      noirProofResult = await _moproFlutterPlugin.generateNoirProof(
           "assets/noir_multiplier2.json",
           "assets/noir_multiplier2.srs",
-          _verificationKey!,
           inputs,
-          disableZk: false,
-          lowMemoryMode: false);
+          true, // onChain: true for Keccak compatibility with Solidity
+          _verificationKey!,
+          false); // lowMemoryMode: false
       // Store the inputs for later use in verification
       _proofInputs = inputs;
     } on Exception catch (e) {
@@ -639,12 +640,12 @@ class _HomePageState extends State<HomePage> {
     bool? valid;
     try {
       var proofResult = _noirProofResult;
-      valid = await _moproFlutterPlugin.verifyNoirKeccakProofWithVk(
+      valid = await _moproFlutterPlugin.verifyNoirProof(
           "assets/noir_multiplier2.json",
-          _verificationKey!,
           proofResult!,
-          disableZk: false,
-          lowMemoryMode: false);
+          true, // onChain: true for Keccak compatibility with Solidity
+          _verificationKey!,
+          false); // lowMemoryMode: false
     } on Exception catch (e) {
       print("Error: $e");
       valid = false;
@@ -668,13 +669,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _verifyOnChain() async {
-    if (!_walletConnected) {
-      setState(() {
-        _error = Exception("Please connect your wallet first");
-      });
-      return;
-    }
-
     if (_noirProofResult == null) {
       setState(() {
         _error = Exception("Please generate a proof first");
@@ -691,25 +685,15 @@ class _HomePageState extends State<HomePage> {
     bool? valid;
     try {
       final originalProof = _noirProofResult!;
-      final rawInputs = _proofInputs!;
       
-      // Calculate the public input (result of multiplication)
-      final a = int.parse(rawInputs[0]);
-      final b = int.parse(rawInputs[1]);
-      final result = a * b;
+      // Get the number of public inputs for this circuit
+      final numPublicInputs = await _moproFlutterPlugin.getNumPublicInputsFromCircuit("assets/noir_multiplier2.json");
+      print('Number of public inputs: $numPublicInputs');
       
-      // Convert the result to bytes32 format for smart contract
-      final publicInputs = [result].map((input) {
-        // Parse the input as a BigInt and convert to 32-byte array
-        final bigIntValue = BigInt.from(input);
-        final hexString = bigIntValue.toRadixString(16).padLeft(64, '0');
-        return Uint8List.fromList(hex.decode(hexString));
-      }).toList();
-
-      // Strip public inputs from the beginning of the proof
-      // Each public input takes 32 bytes at the start of the proof
-      final bytesToStrip = publicInputs.length * 32;
-      final proof = Uint8List.fromList(originalProof.skip(bytesToStrip).toList());
+      // Parse the proof into proof bytes and public inputs using Rust functions
+      final parsedResult = await _moproFlutterPlugin.parseProofWithPublicInputs(originalProof, numPublicInputs);
+      final proof = parsedResult.proof;
+      final publicInputs = parsedResult.publicInputs;
 
       print('Proof: ${hex.encode(proof)}');
       print('Public inputs: ${publicInputs.map((input) => hex.encode(input)).join(', ')}');

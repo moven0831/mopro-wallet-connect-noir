@@ -26,19 +26,27 @@ abstract class MoproFlutterPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<Uint8List> generateNoirKeccakProofWithVk(
-      String circuitPath, String? srsPath, Uint8List vk, List<String> inputs,
-      {bool disableZk = false, bool lowMemoryMode = false}) {
-    throw UnimplementedError('generateNoirKeccakProofWithVk() has not been implemented.');
+  // New API methods matching latest demo patterns
+  Future<Uint8List> generateNoirProof(
+      String circuitPath, String? srsPath, List<String> inputs, bool onChain, Uint8List vk, bool lowMemoryMode) {
+    throw UnimplementedError('generateNoirProof() has not been implemented.');
   }
 
-  Future<bool> verifyNoirKeccakProofWithVk(String circuitPath, Uint8List vk, Uint8List proof,
-      {bool disableZk = false, bool lowMemoryMode = false}) {
-    throw UnimplementedError('verifyNoirKeccakProofWithVk() has not been implemented.');
+  Future<bool> verifyNoirProof(String circuitPath, Uint8List proof, bool onChain, Uint8List vk, bool lowMemoryMode) {
+    throw UnimplementedError('verifyNoirProof() has not been implemented.');
   }
 
-  Future<Uint8List> getNoirVerificationKeccakKey(String circuitPath, String? srsPath,
-      {bool disableZk = false, bool lowMemoryMode = false}) {
-    throw UnimplementedError('getNoirVerificationKeccakKey() has not been implemented.');
+  Future<Uint8List> getNoirVerificationKey(String circuitPath, String? srsPath, bool onChain, bool lowMemoryMode) {
+    throw UnimplementedError('getNoirVerificationKey() has not been implemented.');
   }
+
+
+  Future<int> getNumPublicInputsFromCircuit(String circuitPath) {
+    throw UnimplementedError('getNumPublicInputsFromCircuit() has not been implemented.');
+  }
+
+  Future<ProofWithPublicInputs> parseProofWithPublicInputs(Uint8List proof, int numPublicInputs) {
+    throw UnimplementedError('parseProofWithPublicInputs() has not been implemented.');
+  }
+
 }

@@ -400,6 +400,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -871,6 +887,105 @@ public func FfiConverterTypeHalo2ProofResult_lower(_ value: Halo2ProofResult) ->
 }
 
 
+/**
+ * Struct to hold split proof data
+ */
+public struct ProofWithPublicInputs {
+    /**
+     * The proof without public inputs
+     */
+    public var proof: Data
+    /**
+     * The public inputs as an array of 32-byte values
+     */
+    public var publicInputs: [Data]
+    /**
+     * The number of public inputs
+     */
+    public var numPublicInputs: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The proof without public inputs
+         */proof: Data, 
+        /**
+         * The public inputs as an array of 32-byte values
+         */publicInputs: [Data], 
+        /**
+         * The number of public inputs
+         */numPublicInputs: UInt32) {
+        self.proof = proof
+        self.publicInputs = publicInputs
+        self.numPublicInputs = numPublicInputs
+    }
+}
+
+#if compiler(>=6)
+extension ProofWithPublicInputs: Sendable {}
+#endif
+
+
+extension ProofWithPublicInputs: Equatable, Hashable {
+    public static func ==(lhs: ProofWithPublicInputs, rhs: ProofWithPublicInputs) -> Bool {
+        if lhs.proof != rhs.proof {
+            return false
+        }
+        if lhs.publicInputs != rhs.publicInputs {
+            return false
+        }
+        if lhs.numPublicInputs != rhs.numPublicInputs {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(proof)
+        hasher.combine(publicInputs)
+        hasher.combine(numPublicInputs)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProofWithPublicInputs: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProofWithPublicInputs {
+        return
+            try ProofWithPublicInputs(
+                proof: FfiConverterData.read(from: &buf), 
+                publicInputs: FfiConverterSequenceData.read(from: &buf), 
+                numPublicInputs: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProofWithPublicInputs, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.proof, into: &buf)
+        FfiConverterSequenceData.write(value.publicInputs, into: &buf)
+        FfiConverterUInt32.write(value.numPublicInputs, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProofWithPublicInputs_lift(_ buf: RustBuffer) throws -> ProofWithPublicInputs {
+    return try FfiConverterTypeProofWithPublicInputs.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProofWithPublicInputs_lower(_ value: ProofWithPublicInputs) -> RustBuffer {
+    return FfiConverterTypeProofWithPublicInputs.lower(value)
+}
+
+
 public enum MoproError {
 
     
@@ -1082,6 +1197,31 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceData: FfiConverterRustBuffer {
+    typealias SwiftType = [Data]
+
+    public static func write(_ value: [Data], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterData.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Data]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterData.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryStringSequenceString: FfiConverterRustBuffer {
     public static func write(_ value: [String: [String]], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -1104,6 +1244,17 @@ fileprivate struct FfiConverterDictionaryStringSequenceString: FfiConverterRustB
         return dict
     }
 }
+/**
+ * Combine proof and public inputs back into a single proof with public inputs
+ */
+public func combineProofAndPublicInputs(proof: Data, publicInputs: [Data]) -> Data  {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_mopro_wallet_connect_noir_fn_func_combine_proof_and_public_inputs(
+        FfiConverterData.lower(proof),
+        FfiConverterSequenceData.lower(publicInputs),$0
+    )
+})
+}
 public func generateCircomProof(zkeyPath: String, circuitInputs: String, proofLib: ProofLib)throws  -> CircomProofResult  {
     return try  FfiConverterTypeCircomProofResult_lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
     uniffi_mopro_wallet_connect_noir_fn_func_generate_circom_proof(
@@ -1122,56 +1273,52 @@ public func generateHalo2Proof(srsPath: String, pkPath: String, circuitInputs: [
     )
 })
 }
-public func generateNoirKeccakProof(circuitPath: String, srsPath: String?, inputs: [String], disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
-    uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof(
-        FfiConverterString.lower(circuitPath),
-        FfiConverterOptionString.lower(srsPath),
-        FfiConverterSequenceString.lower(inputs),
-        FfiConverterBool.lower(disableZk),
-        FfiConverterBool.lower(lowMemoryMode),$0
-    )
-})
-}
-public func generateNoirKeccakProofWithVk(circuitPath: String, srsPath: String?, vk: Data, inputs: [String], disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
-    uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_keccak_proof_with_vk(
-        FfiConverterString.lower(circuitPath),
-        FfiConverterOptionString.lower(srsPath),
-        FfiConverterData.lower(vk),
-        FfiConverterSequenceString.lower(inputs),
-        FfiConverterBool.lower(disableZk),
-        FfiConverterBool.lower(lowMemoryMode),$0
-    )
-})
-}
-public func generateNoirProof(circuitPath: String, srsPath: String?, inputs: [String], lowMemoryMode: Bool)throws  -> Data  {
+public func generateNoirProof(circuitPath: String, srsPath: String?, inputs: [String], onChain: Bool, vk: Data, lowMemoryMode: Bool)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
     uniffi_mopro_wallet_connect_noir_fn_func_generate_noir_proof(
         FfiConverterString.lower(circuitPath),
         FfiConverterOptionString.lower(srsPath),
         FfiConverterSequenceString.lower(inputs),
+        FfiConverterBool.lower(onChain),
+        FfiConverterData.lower(vk),
         FfiConverterBool.lower(lowMemoryMode),$0
     )
 })
 }
-public func getNoirVerificationKeccakKey(circuitPath: String, srsPath: String?, disableZk: Bool, lowMemoryMode: Bool)throws  -> Data  {
+public func getNoirVerificationKey(circuitPath: String, srsPath: String?, onChain: Bool, lowMemoryMode: Bool)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
-    uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_keccak_key(
+    uniffi_mopro_wallet_connect_noir_fn_func_get_noir_verification_key(
         FfiConverterString.lower(circuitPath),
         FfiConverterOptionString.lower(srsPath),
-        FfiConverterBool.lower(disableZk),
+        FfiConverterBool.lower(onChain),
         FfiConverterBool.lower(lowMemoryMode),$0
     )
 })
 }
 /**
- * You can also customize the bindings by #[uniffi::export]
- * Reference: https://mozilla.github.io/uniffi-rs/latest/proc_macro/index.html
+ * Get the number of public inputs for a given circuit
  */
+public func getNumPublicInputsFromCircuit(circuitPath: String) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_mopro_wallet_connect_noir_fn_func_get_num_public_inputs_from_circuit(
+        FfiConverterString.lower(circuitPath),$0
+    )
+})
+}
 public func moproUniffiHelloWorld() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_mopro_wallet_connect_noir_fn_func_mopro_uniffi_hello_world($0
+    )
+})
+}
+/**
+ * Parse a proof into proof bytes and public inputs
+ */
+public func parseProofWithPublicInputs(proof: Data, numPublicInputs: UInt32) -> ProofWithPublicInputs  {
+    return try!  FfiConverterTypeProofWithPublicInputs_lift(try! rustCall() {
+    uniffi_mopro_wallet_connect_noir_fn_func_parse_proof_with_public_inputs(
+        FfiConverterData.lower(proof),
+        FfiConverterUInt32.lower(numPublicInputs),$0
     )
 })
 }
@@ -1194,32 +1341,13 @@ public func verifyHalo2Proof(srsPath: String, vkPath: String, proof: Data, publi
     )
 })
 }
-public func verifyNoirKeccakProof(circuitPath: String, proof: Data, disableZk: Bool, lowMemoryMode: Bool)throws  -> Bool  {
-    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
-    uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof(
-        FfiConverterString.lower(circuitPath),
-        FfiConverterData.lower(proof),
-        FfiConverterBool.lower(disableZk),
-        FfiConverterBool.lower(lowMemoryMode),$0
-    )
-})
-}
-public func verifyNoirKeccakProofWithVk(circuitPath: String, vk: Data, proof: Data, disableZk: Bool, lowMemoryMode: Bool)throws  -> Bool  {
-    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
-    uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_keccak_proof_with_vk(
-        FfiConverterString.lower(circuitPath),
-        FfiConverterData.lower(vk),
-        FfiConverterData.lower(proof),
-        FfiConverterBool.lower(disableZk),
-        FfiConverterBool.lower(lowMemoryMode),$0
-    )
-})
-}
-public func verifyNoirProof(circuitPath: String, proof: Data, lowMemoryMode: Bool)throws  -> Bool  {
+public func verifyNoirProof(circuitPath: String, proof: Data, onChain: Bool, vk: Data, lowMemoryMode: Bool)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeMoproError_lift) {
     uniffi_mopro_wallet_connect_noir_fn_func_verify_noir_proof(
         FfiConverterString.lower(circuitPath),
         FfiConverterData.lower(proof),
+        FfiConverterBool.lower(onChain),
+        FfiConverterData.lower(vk),
         FfiConverterBool.lower(lowMemoryMode),$0
     )
 })
@@ -1240,25 +1368,28 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_combine_proof_and_public_inputs() != 1877) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_circom_proof() != 34456) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_halo2_proof() != 32033) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof() != 45636) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 22341) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_keccak_proof_with_vk() != 3686) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_key() != 39944) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_generate_noir_proof() != 65240) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_get_num_public_inputs_from_circuit() != 8643) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_get_noir_verification_keccak_key() != 17707) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world() != 53178) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_mopro_uniffi_hello_world() != 38115) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_parse_proof_with_public_inputs() != 39945) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_circom_proof() != 47338) {
@@ -1267,13 +1398,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_halo2_proof() != 56166) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof() != 7933) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_keccak_proof_with_vk() != 2770) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 18089) {
+    if (uniffi_mopro_wallet_connect_noir_checksum_func_verify_noir_proof() != 4760) {
         return InitializationResult.apiChecksumMismatch
     }
 
