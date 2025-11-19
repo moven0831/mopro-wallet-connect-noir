@@ -1,0 +1,25 @@
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+
+[dependencies.mopro-wallet-connect-noir]
+default-features = false
+features = ["flutter"]
+path = "/Users/moventsai/Projects/mobile-proving/zkmopro/app-instances/mopro-wallet-connect-noir"
+version = "0.1.0"
+
+[lib]
+crate-type = [
+    "cdylib",
+    "staticlib",
+]
+
+[lints.rust.unexpected_cfgs]
+check-cfg = ["cfg(frb_expand)"]
+level = "warn"
+
+[package]
+edition = "2021"
+name = "mopro_flutter_bindings"
+version = "0.1.0"
+
+[workspace]
