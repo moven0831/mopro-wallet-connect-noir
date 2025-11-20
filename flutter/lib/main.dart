@@ -58,6 +58,11 @@ class _HomePageState extends State<HomePage> {
   List<String>? _proofInputs;
   Uint8List? _verificationKey;
 
+  // Timing measurements
+  Duration? _proofGenerationTime;
+  Duration? _localVerificationTime;
+  Duration? _onChainVerificationTime;
+
   // Controllers to handle user input
   final TextEditingController _controllerNoirA = TextEditingController();
   final TextEditingController _controllerNoirB = TextEditingController();
@@ -233,6 +238,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return 'N/A';
+    final milliseconds = duration.inMilliseconds;
+    if (milliseconds < 1000) {
+      return '${milliseconds}ms';
+    } else {
+      return '${(milliseconds / 1000).toStringAsFixed(2)}s';
+    }
+  }
+
   @override
   void dispose() {
     WalletConnectService.removeListener(_onWalletConnectionChanged);
@@ -286,10 +301,12 @@ class _HomePageState extends State<HomePage> {
       _noirProofResult = null;
       _noirValid = null;
       _onChainValid = null;
+      _proofGenerationTime = null;
     });
 
     FocusManager.instance.primaryFocus?.unfocus();
     Uint8List? noirProofResult;
+    final stopwatch = Stopwatch()..start();
     try {
       var inputs = [_controllerNoirA.text, _controllerNoirB.text];
       _proofInputs = inputs;
@@ -314,14 +331,18 @@ class _HomePageState extends State<HomePage> {
         vk: _verificationKey!,
         lowMemoryMode: lowMemoryMode,
       );
+      stopwatch.stop();
+      _proofGenerationTime = stopwatch.elapsed;
       // Store the inputs for later use in verification
       _proofInputs = inputs;
     } on Exception catch (e) {
       print("Error: $e");
+      stopwatch.stop();
       noirProofResult = null;
       _proofInputs = null;
       setState(() {
         _error = e;
+        _proofGenerationTime = null;
       });
     }
 
@@ -343,10 +364,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _error = null;
       isProving = true;
+      _localVerificationTime = null;
     });
 
     FocusManager.instance.primaryFocus?.unfocus();
     bool? valid;
+    final stopwatch = Stopwatch()..start();
     try {
       var proofResult = _noirProofResult;
       var vk = _verificationKey;
@@ -373,17 +396,23 @@ class _HomePageState extends State<HomePage> {
         vk: vk,
         lowMemoryMode: lowMemoryMode,
       );
+      stopwatch.stop();
+      _localVerificationTime = stopwatch.elapsed;
     } on Exception catch (e) {
       print("Error: $e");
+      stopwatch.stop();
       valid = false;
       setState(() {
         _error = e;
+        _localVerificationTime = null;
       });
     } on TypeError catch (e) {
       print("Error: $e");
+      stopwatch.stop();
       valid = false;
       setState(() {
         _error = Exception(e.toString());
+        _localVerificationTime = null;
       });
     }
 
@@ -406,10 +435,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _error = null;
       isVerifyingOnChain = true;
+      _onChainVerificationTime = null;
     });
 
     FocusManager.instance.primaryFocus?.unfocus();
     bool? valid;
+    final stopwatch = Stopwatch()..start();
     try {
       final originalProof = _noirProofResult!;
 
@@ -447,19 +478,25 @@ class _HomePageState extends State<HomePage> {
       );
 
       valid = verifyResult.first as bool;
+      stopwatch.stop();
+      _onChainVerificationTime = stopwatch.elapsed;
 
       httpClient.dispose();
     } on Exception catch (e) {
       print("On-chain verification error: $e");
+      stopwatch.stop();
       valid = false;
       setState(() {
         _error = e;
+        _onChainVerificationTime = null;
       });
     } catch (e) {
       print("On-chain verification error: $e");
+      stopwatch.stop();
       valid = false;
       setState(() {
         _error = Exception(e.toString());
+        _onChainVerificationTime = null;
       });
     }
 
@@ -675,6 +712,8 @@ class _HomePageState extends State<HomePage> {
                     if (_proofInputs != null)
                       Text('Inputs: a=${_proofInputs![0]}, b=${_proofInputs![1]}'),
                     Text('Proof size: ${_noirProofResult!.length} bytes'),
+                    if (_proofGenerationTime != null)
+                      Text('Time: ${_formatDuration(_proofGenerationTime)}'),
                     if (_noirValid != null) ...[
                       const SizedBox(height: 8),
                       Row(
@@ -693,6 +732,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
+                      if (_localVerificationTime != null)
+                        Text('Time: ${_formatDuration(_localVerificationTime)}'),
                     ],
                     if (_onChainValid != null) ...[
                       const SizedBox(height: 8),
@@ -712,6 +753,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
+                      if (_onChainVerificationTime != null)
+                        Text('Time: ${_formatDuration(_onChainVerificationTime)}'),
                     ],
                   ],
                 ),
