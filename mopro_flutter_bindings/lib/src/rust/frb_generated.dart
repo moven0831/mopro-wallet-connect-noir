@@ -64,7 +64,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1333386891;
+  int get rustContentHash => 165435581;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -75,6 +75,11 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<Uint8List> moproWalletConnectNoirCombineProofAndPublicInputs({
+    required List<int> proof,
+    required List<Uint8List> publicInputs,
+  });
+
   Future<Uint8List> moproWalletConnectNoirGenerateNoirProof({
     required String circuitPath,
     String? srsPath,
@@ -91,9 +96,19 @@ abstract class RustLibApi extends BaseApi {
     required bool lowMemoryMode,
   });
 
+  Future<int> moproWalletConnectNoirGetNumPublicInputsFromCircuit({
+    required String circuitPath,
+  });
+
   Future<void> moproWalletConnectNoirInitApp();
 
   Future<String> moproWalletConnectNoirMoproHelloWorld();
+
+  Future<ProofWithPublicInputs>
+  moproWalletConnectNoirParseProofWithPublicInputs({
+    required List<int> proof,
+    required int numPublicInputs,
+  });
 
   Future<bool> moproWalletConnectNoirVerifyNoirProof({
     required String circuitPath,
@@ -121,6 +136,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<Uint8List> moproWalletConnectNoirCombineProofAndPublicInputs({
+    required List<int> proof,
+    required List<Uint8List> publicInputs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(proof, serializer);
+          sse_encode_list_list_prim_u_8_strict(publicInputs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: null,
+        ),
+        constMeta: kMoproWalletConnectNoirCombineProofAndPublicInputsConstMeta,
+        argValues: [proof, publicInputs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kMoproWalletConnectNoirCombineProofAndPublicInputsConstMeta =>
+      const TaskConstMeta(
+        debugName: "combine_proof_and_public_inputs",
+        argNames: ["proof", "publicInputs"],
+      );
+
+  @override
   Future<Uint8List> moproWalletConnectNoirGenerateNoirProof({
     required String circuitPath,
     String? srsPath,
@@ -142,7 +193,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -189,7 +240,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 3,
             port: port_,
           );
         },
@@ -212,6 +263,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<int> moproWalletConnectNoirGetNumPublicInputsFromCircuit({
+    required String circuitPath,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(circuitPath, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kMoproWalletConnectNoirGetNumPublicInputsFromCircuitConstMeta,
+        argValues: [circuitPath],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kMoproWalletConnectNoirGetNumPublicInputsFromCircuitConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_num_public_inputs_from_circuit",
+        argNames: ["circuitPath"],
+      );
+
+  @override
   Future<void> moproWalletConnectNoirInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -220,7 +306,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 5,
             port: port_,
           );
         },
@@ -247,7 +333,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -264,6 +350,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kMoproWalletConnectNoirMoproHelloWorldConstMeta =>
       const TaskConstMeta(debugName: "mopro_hello_world", argNames: []);
+
+  @override
+  Future<ProofWithPublicInputs>
+  moproWalletConnectNoirParseProofWithPublicInputs({
+    required List<int> proof,
+    required int numPublicInputs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(proof, serializer);
+          sse_encode_u_32(numPublicInputs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_proof_with_public_inputs,
+          decodeErrorData: null,
+        ),
+        constMeta: kMoproWalletConnectNoirParseProofWithPublicInputsConstMeta,
+        argValues: [proof, numPublicInputs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kMoproWalletConnectNoirParseProofWithPublicInputsConstMeta =>
+      const TaskConstMeta(
+        debugName: "parse_proof_with_public_inputs",
+        argNames: ["proof", "numPublicInputs"],
+      );
 
   @override
   Future<bool> moproWalletConnectNoirVerifyNoirProof({
@@ -285,7 +408,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 8,
             port: port_,
           );
         },
@@ -352,6 +475,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_list_prim_u_8_strict).toList();
+  }
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as List<int>;
@@ -367,6 +496,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  ProofWithPublicInputs dco_decode_proof_with_public_inputs(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProofWithPublicInputs(
+      proof: dco_decode_list_prim_u_8_strict(arr[0]),
+      publicInputs: dco_decode_list_list_prim_u_8_strict(arr[1]),
+      numPublicInputs: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -437,6 +585,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<Uint8List> sse_decode_list_list_prim_u_8_strict(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Uint8List>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_list_prim_u_8_strict(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -459,6 +621,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  ProofWithPublicInputs sse_decode_proof_with_public_inputs(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_proof = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_publicInputs = sse_decode_list_list_prim_u_8_strict(deserializer);
+    var var_numPublicInputs = sse_decode_u_32(deserializer);
+    return ProofWithPublicInputs(
+      proof: var_proof,
+      publicInputs: var_publicInputs,
+      numPublicInputs: var_numPublicInputs,
+    );
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
   }
 
   @protected
@@ -532,6 +715,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_list_prim_u_8_strict(
+    List<Uint8List> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_list_prim_u_8_strict(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_loose(
     List<int> self,
     SseSerializer serializer,
@@ -561,6 +756,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_String(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_proof_with_public_inputs(
+    ProofWithPublicInputs self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.proof, serializer);
+    sse_encode_list_list_prim_u_8_strict(self.publicInputs, serializer);
+    sse_encode_u_32(self.numPublicInputs, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
   }
 
   @protected

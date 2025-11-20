@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1333386891;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 165435581;
 
 // Section: executor
 
@@ -46,6 +46,45 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__mopro_wallet_connect_noir__combine_proof_and_public_inputs_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "combine_proof_and_public_inputs",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_proof = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_public_inputs = <Vec<Vec<u8>>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        mopro_wallet_connect_noir::combine_proof_and_public_inputs(
+                            api_proof,
+                            api_public_inputs,
+                        ),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__mopro_wallet_connect_noir__generate_noir_proof_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -132,6 +171,43 @@ fn wire__mopro_wallet_connect_noir__get_noir_verification_key_impl(
         },
     )
 }
+fn wire__mopro_wallet_connect_noir__get_num_public_inputs_from_circuit_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_num_public_inputs_from_circuit",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_circuit_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        mopro_wallet_connect_noir::get_num_public_inputs_from_circuit(
+                            api_circuit_path,
+                        ),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__mopro_wallet_connect_noir__init_app_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -199,6 +275,45 @@ fn wire__mopro_wallet_connect_noir__mopro_hello_world_impl(
         },
     )
 }
+fn wire__mopro_wallet_connect_noir__parse_proof_with_public_inputs_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_proof_with_public_inputs",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_proof = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_num_public_inputs = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        mopro_wallet_connect_noir::parse_proof_with_public_inputs(
+                            api_proof,
+                            api_num_public_inputs,
+                        ),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__mopro_wallet_connect_noir__verify_noir_proof_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -242,6 +357,16 @@ fn wire__mopro_wallet_connect_noir__verify_noir_proof_impl(
         },
     )
 }
+
+// Section: static_checks
+
+#[allow(clippy::unnecessary_literal_unwrap)]
+const _: fn() = || {
+    let ProofWithPublicInputs = None::<mopro_wallet_connect_noir::ProofWithPublicInputs>.unwrap();
+    let _: Vec<u8> = ProofWithPublicInputs.proof;
+    let _: Vec<Vec<u8>> = ProofWithPublicInputs.public_inputs;
+    let _: u32 = ProofWithPublicInputs.num_public_inputs;
+};
 
 // Section: related_funcs
 
@@ -298,6 +423,18 @@ impl SseDecode for Vec<String> {
     }
 }
 
+impl SseDecode for Vec<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<Vec<u8>>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -318,6 +455,27 @@ impl SseDecode for Option<String> {
         } else {
             return None;
         }
+    }
+}
+
+impl SseDecode for mopro_wallet_connect_noir::ProofWithPublicInputs {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_proof = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_publicInputs = <Vec<Vec<u8>>>::sse_decode(deserializer);
+        let mut var_numPublicInputs = <u32>::sse_decode(deserializer);
+        return mopro_wallet_connect_noir::ProofWithPublicInputs {
+            proof: var_proof,
+            public_inputs: var_publicInputs,
+            num_public_inputs: var_numPublicInputs,
+        };
+    }
+}
+
+impl SseDecode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u32::<NativeEndian>().unwrap()
     }
 }
 
@@ -356,26 +514,44 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__mopro_wallet_connect_noir__generate_noir_proof_impl(
+        1 => wire__mopro_wallet_connect_noir__combine_proof_and_public_inputs_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        2 => wire__mopro_wallet_connect_noir__get_noir_verification_key_impl(
+        2 => wire__mopro_wallet_connect_noir__generate_noir_proof_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__mopro_wallet_connect_noir__init_app_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__mopro_wallet_connect_noir__mopro_hello_world_impl(
+        3 => wire__mopro_wallet_connect_noir__get_noir_verification_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__mopro_wallet_connect_noir__verify_noir_proof_impl(
+        4 => wire__mopro_wallet_connect_noir__get_num_public_inputs_from_circuit_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        5 => wire__mopro_wallet_connect_noir__init_app_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__mopro_wallet_connect_noir__mopro_hello_world_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        7 => wire__mopro_wallet_connect_noir__parse_proof_with_public_inputs_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        8 => wire__mopro_wallet_connect_noir__verify_noir_proof_impl(
             port,
             ptr,
             rust_vec_len,
@@ -410,6 +586,31 @@ impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<
 
 impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<MoproError>> for MoproError {
     fn into_into_dart(self) -> FrbWrapper<MoproError> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart
+    for FrbWrapper<mopro_wallet_connect_noir::ProofWithPublicInputs>
+{
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.0.proof.into_into_dart().into_dart(),
+            self.0.public_inputs.into_into_dart().into_dart(),
+            self.0.num_public_inputs.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for FrbWrapper<mopro_wallet_connect_noir::ProofWithPublicInputs>
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<mopro_wallet_connect_noir::ProofWithPublicInputs>>
+    for mopro_wallet_connect_noir::ProofWithPublicInputs
+{
+    fn into_into_dart(self) -> FrbWrapper<mopro_wallet_connect_noir::ProofWithPublicInputs> {
         self.into()
     }
 }
@@ -456,6 +657,16 @@ impl SseEncode for Vec<String> {
     }
 }
 
+impl SseEncode for Vec<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <Vec<u8>>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -473,6 +684,22 @@ impl SseEncode for Option<String> {
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
         }
+    }
+}
+
+impl SseEncode for mopro_wallet_connect_noir::ProofWithPublicInputs {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<u8>>::sse_encode(self.proof, serializer);
+        <Vec<Vec<u8>>>::sse_encode(self.public_inputs, serializer);
+        <u32>::sse_encode(self.num_public_inputs, serializer);
+    }
+}
+
+impl SseEncode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u32::<NativeEndian>(self).unwrap();
     }
 }
 

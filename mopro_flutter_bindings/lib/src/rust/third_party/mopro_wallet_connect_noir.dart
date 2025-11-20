@@ -6,14 +6,36 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ProofWithPublicInputs`
-
 Future<void> initApp() => RustLib.instance.api.moproWalletConnectNoirInitApp();
 
 /// You can also customize the bindings by #[uniffi::export]
 /// Reference: https://mozilla.github.io/uniffi-rs/latest/proc_macro/index.html
 Future<String> moproHelloWorld() =>
     RustLib.instance.api.moproWalletConnectNoirMoproHelloWorld();
+
+/// Get the number of public inputs for a given circuit
+Future<int> getNumPublicInputsFromCircuit({required String circuitPath}) =>
+    RustLib.instance.api.moproWalletConnectNoirGetNumPublicInputsFromCircuit(
+      circuitPath: circuitPath,
+    );
+
+/// Parse a proof into proof bytes and public inputs
+Future<ProofWithPublicInputs> parseProofWithPublicInputs({
+  required List<int> proof,
+  required int numPublicInputs,
+}) => RustLib.instance.api.moproWalletConnectNoirParseProofWithPublicInputs(
+  proof: proof,
+  numPublicInputs: numPublicInputs,
+);
+
+/// Combine proof and public inputs back into a single proof with public inputs
+Future<Uint8List> combineProofAndPublicInputs({
+  required List<int> proof,
+  required List<Uint8List> publicInputs,
+}) => RustLib.instance.api.moproWalletConnectNoirCombineProofAndPublicInputs(
+  proof: proof,
+  publicInputs: publicInputs,
+);
 
 /// Generates a Noir proof with automatic hash function selection
 ///
@@ -80,3 +102,34 @@ Future<Uint8List> getNoirVerificationKey({
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<MoproError>>
 abstract class MoproError implements RustOpaqueInterface {}
+
+/// Struct to hold split proof data
+class ProofWithPublicInputs {
+  /// The proof without public inputs
+  final Uint8List proof;
+
+  /// The public inputs as an array of 32-byte values
+  final List<Uint8List> publicInputs;
+
+  /// The number of public inputs
+  final int numPublicInputs;
+
+  const ProofWithPublicInputs({
+    required this.proof,
+    required this.publicInputs,
+    required this.numPublicInputs,
+  });
+
+  @override
+  int get hashCode =>
+      proof.hashCode ^ publicInputs.hashCode ^ numPublicInputs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProofWithPublicInputs &&
+          runtimeType == other.runtimeType &&
+          proof == other.proof &&
+          publicInputs == other.publicInputs &&
+          numPublicInputs == other.numPublicInputs;
+}
