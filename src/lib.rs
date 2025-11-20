@@ -24,7 +24,7 @@ pub struct ProofWithPublicInputs {
 
 /// Get the number of public inputs for a given circuit
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-fn get_num_public_inputs_from_circuit(circuit_path: String) -> u32 {
+pub fn get_num_public_inputs_from_circuit(circuit_path: String) -> u32 {
     // Read the JSON manifest of the circuit
     let circuit_txt = std::fs::read_to_string(circuit_path).unwrap();
     let circuit: serde_json::Value = serde_json::from_str(&circuit_txt).unwrap();
@@ -37,7 +37,7 @@ fn get_num_public_inputs_from_circuit(circuit_path: String) -> u32 {
 
 /// Parse a proof into proof bytes and public inputs
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-fn parse_proof_with_public_inputs(proof: Vec<u8>, num_public_inputs: u32) -> ProofWithPublicInputs {
+pub fn parse_proof_with_public_inputs(proof: Vec<u8>, num_public_inputs: u32) -> ProofWithPublicInputs {
     let parsed = noir_rs::utils::parse_proof_with_public_inputs(&proof, num_public_inputs as usize)
         .unwrap();
 
@@ -50,7 +50,7 @@ fn parse_proof_with_public_inputs(proof: Vec<u8>, num_public_inputs: u32) -> Pro
 
 /// Combine proof and public inputs back into a single proof with public inputs
 #[cfg_attr(feature = "uniffi", uniffi::export)]
-fn combine_proof_and_public_inputs(proof: Vec<u8>, public_inputs: Vec<Vec<u8>>) -> Vec<u8> {
+pub fn combine_proof_and_public_inputs(proof: Vec<u8>, public_inputs: Vec<Vec<u8>>) -> Vec<u8> {
     noir_rs::utils::combine_proof_and_public_inputs(proof, public_inputs)
 }
 
