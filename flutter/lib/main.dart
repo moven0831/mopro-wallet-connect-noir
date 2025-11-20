@@ -1,10 +1,12 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'package:mopro_flutter/mopro_flutter.dart';
-import 'package:mopro_flutter/mopro_types.dart';
+import 'package:mopro_flutter_bindings/src/rust/third_party/mopro_wallet_connect_noir.dart';
+import 'package:mopro_flutter_bindings/src/rust/frb_generated.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:convert/convert.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +16,8 @@ import 'wallet_connect_service.dart';
 // Global navigator key for the app
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+Future<void> main() async {
+  await RustLib.init();
   runApp(const MyApp());
 }
 
@@ -47,19 +50,18 @@ class _HomePageState extends State<HomePage> {
   Uint8List? _noirProofResult;
   bool? _noirValid;
   bool? _onChainValid;
-  final _moproFlutterPlugin = MoproFlutter();
   bool isProving = false;
   bool isVerifyingOnChain = false;
   Exception? _error;
   bool _walletConnected = false;
   bool _isInitializing = true;
-  List<String>? _proofInputs; // Store the inputs used for proof generation
-  Uint8List? _verificationKey; // Store the loaded verification key
+  List<String>? _proofInputs;
+  Uint8List? _verificationKey;
 
   // Controllers to handle user input
   final TextEditingController _controllerNoirA = TextEditingController();
   final TextEditingController _controllerNoirB = TextEditingController();
-  
+
   // Smart contract details
   static const String contractAddress = "0x3C9f0361F4120D236F752035D22D1e850EA0f5E6";
   static const String contractABI = '''[
@@ -119,6 +121,20 @@ class _HomePageState extends State<HomePage> {
     }
   ]''';
 
+  // Helper function to copy assets to file system for native code access
+  Future<String> copyAssetToFileSystem(String assetPath) async {
+    // Load the asset as bytes
+    final byteData = await rootBundle.load(assetPath);
+    // Get the app's document directory
+    final directory = await getApplicationDocumentsDirectory();
+    // Strip off the initial dirs from the filename
+    final fileName = assetPath.split('/').last;
+    final file = File('${directory.path}/$fileName');
+    // Write the bytes to a file in the file system
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return file.path; // Return the file path
+  }
+
   @override
   void initState() {
     super.initState();
@@ -147,16 +163,16 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _isInitializing = false;
         });
-        
+
         final errorMessage = e.toString();
         final isConfigError = errorMessage.contains('Project ID not configured');
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isConfigError 
-                ? 'Configuration Error: Missing PROJECT_ID'
-                : 'Failed to initialize wallet connect: $errorMessage'
+              isConfigError
+                  ? 'Configuration Error: Missing PROJECT_ID'
+                  : 'Failed to initialize wallet connect: $errorMessage'
             ),
             backgroundColor: Colors.red,
             duration: Duration(seconds: isConfigError ? 8 : 5),
@@ -257,347 +273,47 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildWalletSection() {
-    if (_isInitializing) {
-      return Card(
-        margin: const EdgeInsets.all(8.0),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Wallet Connection',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Center(
-                child: CircularProgressIndicator(),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Initializing wallet connect...',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Wallet Connection',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            if (_walletConnected) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 32),
-                    const SizedBox(height: 8),
-                    const Text('Wallet Connected'),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Address: ${WalletConnectService.connectedAddress ?? 'Unknown'}',
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Network: ${WalletConnectService.connectedChainName ?? 'Unknown'}',
-                      style: const TextStyle(fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _disconnectWallet,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Disconnect'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(Icons.wallet, color: Colors.orange, size: 32),
-                    SizedBox(height: 8),
-                    Text('No Wallet Connected'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _connectWallet,
-                icon: const Icon(Icons.account_balance_wallet),
-                label: const Text('Connect Wallet'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProofSection() {
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Zero-Knowledge Proof Generator',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            if (isProving) 
-              const Center(child: CircularProgressIndicator()),
-            if (_error != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red),
-                ),
-                child: Text(
-                  _error.toString(),
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            TextFormField(
-              controller: _controllerNoirA,
-              decoration: const InputDecoration(
-                labelText: "Private input `a`",
-                hintText: "For example, 3",
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _controllerNoirB,
-              decoration: const InputDecoration(
-                labelText: "Private input `b`",
-                hintText: "For example, 5",
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (_controllerNoirA.text.isEmpty || 
-                                _controllerNoirB.text.isEmpty || 
-                                isProving || isVerifyingOnChain || 
-                                _verificationKey == null) ? null : _generateProof,
-                    icon: const Icon(Icons.create),
-                    label: const Text("Generate Proof"),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain || _verificationKey == null) ? null : _verifyProof,
-                    icon: const Icon(Icons.verified),
-                    label: const Text("Verify Local"),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: (_noirProofResult == null || isProving || isVerifyingOnChain) ? null : _verifyOnChain,
-              icon: isVerifyingOnChain 
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.cloud_done),
-              label: Text(isVerifyingOnChain ? "Verifying On-Chain..." : "Verify On-Chain"),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-            if (_noirProofResult != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.info, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Proof Generated Successfully',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Proof byte length: ${_noirProofResult!.length} bytes',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    // Local verification result
-                    if (_noirValid != null) ...[
-                      Row(
-                        children: [
-                          Icon(
-                            (_noirValid == true) ? Icons.check_circle : Icons.cancel,
-                            color: (_noirValid == true) ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Local verification: ${_noirValid! ? "VALID" : "INVALID"}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: (_noirValid == true) ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    
-                    // On-chain verification result
-                    if (_onChainValid != null) ...[
-                      Row(
-                        children: [
-                          Icon(
-                            (_onChainValid == true) ? Icons.check_circle : Icons.cancel,
-                            color: (_onChainValid == true) ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'On-chain verification: ${_onChainValid! ? "VALID" : "INVALID"}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: (_onChainValid == true) ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    
-                    const SizedBox(height: 8),
-                    ExpansionTile(
-                      title: const Text('Proof Data', style: TextStyle(fontWeight: FontWeight.bold)),
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            _noirProofResult.toString(),
-                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _generateProof() async {
-    if (_verificationKey == null) {
-      setState(() {
-        _error = Exception('Verification key not loaded. Please wait for initialization.');
-      });
+  Future<void> _generateNoirProof() async {
+    if (_controllerNoirA.text.isEmpty ||
+        _controllerNoirB.text.isEmpty ||
+        isProving) {
       return;
     }
 
     setState(() {
       _error = null;
       isProving = true;
+      _noirProofResult = null;
+      _noirValid = null;
+      _onChainValid = null;
     });
 
     FocusManager.instance.primaryFocus?.unfocus();
     Uint8List? noirProofResult;
     try {
-      var inputs = [
-        _controllerNoirA.text,
-        _controllerNoirB.text
-      ];
-      noirProofResult = await _moproFlutterPlugin.generateNoirProof(
-          "assets/noir_multiplier2.json",
-          "assets/noir_multiplier2.srs",
-          inputs,
-          true, // onChain: true for Keccak compatibility with Solidity
-          _verificationKey!,
-          false); // lowMemoryMode: false
+      var inputs = [_controllerNoirA.text, _controllerNoirB.text];
+      _proofInputs = inputs;
+
+      // Constants for Noir proof generation
+      const bool onChain = true;
+      const bool lowMemoryMode = false;
+
+      if (_verificationKey == null) {
+        throw Exception('Verification key not loaded. Please restart the app.');
+      }
+
+      // Copy assets to file system for native code access
+      final circuitPath = await copyAssetToFileSystem('assets/noir_multiplier2.json');
+      final srsPath = await copyAssetToFileSystem('assets/noir_multiplier2.srs');
+
+      noirProofResult = await generateNoirProof(
+        circuitPath: circuitPath,
+        srsPath: srsPath,
+        inputs: inputs,
+        onChain: onChain,
+        vk: _verificationKey!,
+        lowMemoryMode: lowMemoryMode,
+      );
       // Store the inputs for later use in verification
       _proofInputs = inputs;
     } on Exception catch (e) {
@@ -614,20 +330,13 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       isProving = false;
       _noirProofResult = noirProofResult;
-      _noirValid = null; // Reset validity when new proof is generated
-      _onChainValid = null; // Reset on-chain validity when new proof is generated
-      // Clear stored inputs if proof generation failed
-      if (noirProofResult == null) {
-        _proofInputs = null;
-      }
     });
   }
 
-  Future<void> _verifyProof() async {
-    if (_verificationKey == null) {
-      setState(() {
-        _error = Exception('Verification key not loaded. Please wait for initialization.');
-      });
+  Future<void> _verifyNoirProof() async {
+    if (_controllerNoirA.text.isEmpty ||
+        _controllerNoirB.text.isEmpty ||
+        isProving) {
       return;
     }
 
@@ -640,12 +349,30 @@ class _HomePageState extends State<HomePage> {
     bool? valid;
     try {
       var proofResult = _noirProofResult;
-      valid = await _moproFlutterPlugin.verifyNoirProof(
-          "assets/noir_multiplier2.json",
-          proofResult!,
-          true, // onChain: true for Keccak compatibility with Solidity
-          _verificationKey!,
-          false); // lowMemoryMode: false
+      var vk = _verificationKey;
+
+      if (vk == null) {
+        throw Exception("Verification key not available. Generate proof first.");
+      }
+
+      if (proofResult == null) {
+        throw Exception("No proof available. Generate proof first.");
+      }
+
+      // Constants for Noir proof verification
+      const bool onChain = true; // Use Keccak for Solidity compatibility
+      const bool lowMemoryMode = false;
+
+      // Copy circuit asset to file system for native code access
+      final circuitPath = await copyAssetToFileSystem('assets/noir_multiplier2.json');
+
+      valid = await verifyNoirProof(
+        circuitPath: circuitPath,
+        proof: proofResult,
+        onChain: onChain,
+        vk: vk,
+        lowMemoryMode: lowMemoryMode,
+      );
     } on Exception catch (e) {
       print("Error: $e");
       valid = false;
@@ -685,13 +412,16 @@ class _HomePageState extends State<HomePage> {
     bool? valid;
     try {
       final originalProof = _noirProofResult!;
-      
+
+      // Copy circuit asset to file system for native code access
+      final circuitPath = await copyAssetToFileSystem('assets/noir_multiplier2.json');
+
       // Get the number of public inputs for this circuit
-      final numPublicInputs = await _moproFlutterPlugin.getNumPublicInputsFromCircuit("assets/noir_multiplier2.json");
+      final numPublicInputs = await getNumPublicInputsFromCircuit(circuitPath: circuitPath);
       print('Number of public inputs: $numPublicInputs');
-      
+
       // Parse the proof into proof bytes and public inputs using Rust functions
-      final parsedResult = await _moproFlutterPlugin.parseProofWithPublicInputs(originalProof, numPublicInputs);
+      final parsedResult = await parseProofWithPublicInputs(proof: originalProof, numPublicInputs: numPublicInputs);
       final proof = parsedResult.proof;
       final publicInputs = parsedResult.publicInputs;
 
@@ -701,7 +431,7 @@ class _HomePageState extends State<HomePage> {
       // Create Web3 client
       final rpcUrl = 'https://ethereum-sepolia.publicnode.com';
       final httpClient = Web3Client(rpcUrl, http.Client());
-      
+
       // Create contract instance
       final contract = DeployedContract(
         ContractAbi.fromJson(contractABI, 'HonkVerifier'),
@@ -715,9 +445,9 @@ class _HomePageState extends State<HomePage> {
         function: verifyFunction,
         params: [proof, publicInputs],
       );
-      
+
       valid = verifyResult.first as bool;
-      
+
       httpClient.dispose();
     } on Exception catch (e) {
       print("On-chain verification error: $e");
@@ -739,6 +469,258 @@ class _HomePageState extends State<HomePage> {
       _onChainValid = valid;
       isVerifyingOnChain = false;
     });
+  }
+
+  Widget _buildWalletSection() {
+    return Card(
+      margin: const EdgeInsets.all(16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Wallet Connection',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_isInitializing)
+              const Center(child: CircularProgressIndicator())
+            else if (_walletConnected) ...[
+              const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Connected to wallet'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (WalletConnectService.connectedAddress != null) ...[
+                Text(
+                  'Address: ${WalletConnectService.connectedAddress}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+              if (WalletConnectService.connectedChainName != null) ...[
+                Text(
+                  'Chain: ${WalletConnectService.connectedChainName}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _disconnectWallet,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Disconnect'),
+              ),
+            ] else ...[
+              const Row(
+                children: [
+                  Icon(Icons.cancel, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Not connected'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _connectWallet,
+                child: const Text('Connect Wallet'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProofSection() {
+    return Card(
+      margin: const EdgeInsets.all(16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Noir Zero-Knowledge Proof',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (isProving || isVerifyingOnChain)
+              const Center(child: CircularProgressIndicator()),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error.toString(),
+                          style: TextStyle(color: Colors.red.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextFormField(
+                controller: _controllerNoirA,
+                decoration: const InputDecoration(
+                  labelText: "Public input `a`",
+                  hintText: "For example, 3",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextFormField(
+                controller: _controllerNoirB,
+                decoration: const InputDecoration(
+                  labelText: "Public input `b`",
+                  hintText: "For example, 5",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: (_controllerNoirA.text.isEmpty ||
+                          _controllerNoirB.text.isEmpty ||
+                          isProving)
+                          ? null
+                          : _generateNoirProof,
+                      child: const Text("Generate Proof"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: (_noirProofResult == null || isProving)
+                          ? null
+                          : _verifyNoirProof,
+                      child: const Text("Verify Proof"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_walletConnected && _noirProofResult != null)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isVerifyingOnChain ? null : _verifyOnChain,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text("Verify On-Chain"),
+                  ),
+                ),
+              ),
+            if (_noirProofResult != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.blue.shade700),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Proof Generated',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_proofInputs != null)
+                      Text('Inputs: a=${_proofInputs![0]}, b=${_proofInputs![1]}'),
+                    Text('Proof size: ${_noirProofResult!.length} bytes'),
+                    if (_noirValid != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _noirValid! ? Icons.verified : Icons.cancel,
+                            color: _noirValid! ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Local verification: ${_noirValid! ? "VALID" : "INVALID"}',
+                            style: TextStyle(
+                              color: _noirValid! ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_onChainValid != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _onChainValid! ? Icons.verified : Icons.cancel,
+                            color: _onChainValid! ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'On-chain verification: ${_onChainValid! ? "VALID" : "INVALID"}',
+                            style: TextStyle(
+                              color: _onChainValid! ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override

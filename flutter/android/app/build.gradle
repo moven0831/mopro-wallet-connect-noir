@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.example.mopro_flutter_example"
     compileSdk flutter.compileSdkVersion
-    ndkVersion = "26.3.11579264"
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -57,13 +57,10 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
             // Enables code shrinking, obfuscation, and optimization for only
-            // your project's release build type. Make sure to use a build
-            // variant with `debuggable false`.
-            minifyEnabled false
+            minifyEnabled true
 
-            // Enables resource shrinking, which is performed by the
-            // Android Gradle plugin.
-            shrinkResources false
+            // Enables resource shrinking
+            shrinkResources true
         }
     }
 }
