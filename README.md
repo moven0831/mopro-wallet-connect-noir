@@ -43,6 +43,10 @@ Before you begin, ensure you have:
 git clone https://github.com/your-username/mopro-wallet-connect-noir
 cd mopro-wallet-connect-noir
 
+# Generate Flutter Bindings
+# Select `Flutter` Options 
+mopro build
+
 # Install Flutter dependencies
 cd flutter
 flutter pub get
